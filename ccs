@@ -9,18 +9,20 @@ import os.path
 
 RICCI_PORT = 11111
 
-password = ""
+password = None
+debug = False
 
 def main(argv):
     hostname = "localhost"
     getconf = False
-    status = fence = debug = start = stop = False
+    status = fence = start = stop = False
     listnodes = listservices = listdomains = False
     addnode = removenode = getversion = False
     incrementversion = setversion = False
     createcluster = False
     passwordset = False
     global password
+    global debug
 #    logging.basicConfig(level=logging.DEBUG)
     try:
         opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","listnodes",
@@ -51,7 +53,7 @@ def main(argv):
         elif opt in ("--createcluster"):
 	    createcluster = True
 	    clustername = arg
-	elif opt in ("d"): debug = True
+	elif opt in ("-d"): debug = True
 	 
     if (getconf): get_cluster_conf(hostname)
     if (status): get_cluster_status(hostname)
@@ -231,8 +233,9 @@ def create_cluster(hostname, clustername):
 
 def set_cluster_conf(hostname,xml):
     xml = xml.replace('<?xml version="1.0" ?>','')
-    print xml
-    print send_ricci_command(hostname, "cluster", "set_cluster.conf", ("cluster.conf","xml","",xml))
+    log_msg ("Empty cluster file created:")
+    log_msg (xml)
+    log_msg (send_ricci_command(hostname, "cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
 
 def send_ricci_command(hostname, module, command, *vars):
     global password
@@ -245,9 +248,8 @@ def send_ricci_command(hostname, module, command, *vars):
 	variables = variables + "</var>"
 
     
-    # Make sure that we can authenticate, if not bail out
-    authenticate = False
-    if authenticate == True:
+    # If a password is set, then we authenticate
+    if password != None:
         msg = '<ricci function="authenticate" password="%s" version="1.0"/>' % password
         res = send_to_ricci(hostname, msg)     
         dom = minidom.parseString(res[1])
@@ -259,7 +261,7 @@ def send_ricci_command(hostname, module, command, *vars):
     msg = '<ricci function="process_batch" async="false" version="1.0"><batch><module name="%s"><request API_version="1.0"><function_call name="%s">%s</function_call></request></module></batch></ricci>' % (module,command,variables)
     res = send_to_ricci(hostname, msg)
     dom = minidom.parseString(res[1].replace('\t',''))
-    xml =  (dom.getElementsByTagName('function_response')[0].toxml())
+    xml = dom.getElementsByTagName('function_response')[0].toxml()
     return xml 
 
 def send_to_ricci(hostname, msg):
@@ -304,9 +306,9 @@ def send_to_ricci(hostname, msg):
 	print "Unable to connect to %s, make sure the ricci server is started." % hostname
 	sys.exit(1)
 
-    print "XXXSending to ricci server:"
-    print msg
-    print "YYYSending End"
+    log_msg ("***Sending to ricci server:")
+    log_msg (msg)
+    log_msg ("***Sending End")
     logging.debug("Connected...")
     res1 = ss.read(1024)
     logging.debug("Writing...")
@@ -327,10 +329,16 @@ def send_to_ricci(hostname, msg):
             break
         except:
             pass
-    print "XXXReceived from ricci server"
-    print res2
-    print "YYYReceive End"
+    log_msg ("***Received from ricci server")
+    log_msg (res2)
+    log_msg ("***Receive End")
     return res1, res2
+
+def log_msg(message):
+    global debug
+
+    if debug == True:
+      print message
 
 if __name__ == "__main__":
     main(sys.argv[1:])
