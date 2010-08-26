@@ -19,15 +19,16 @@ def main(argv):
     listnodes = listservices = listdomains = False
     addnode = removenode = getversion = False
     incrementversion = setversion = False
-    createcluster = False
+    createmethod = removemethod = createcluster = False
+    addfencedev = removefencedev = False
     passwordset = False
     global password
     global debug
-#    logging.basicConfig(level=logging.DEBUG)
+#    logging.basicConfig(level=logging.DEBUGRemove
     try:
-        opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","listnodes",
+        opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","lsnodes",
 	  "listservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
-	  "createcluster=", "password="])
+	  "createcluster=", "password=", "createmethod=", "removemethod=", "node=", "addfencedev=", "removefencedev="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -42,7 +43,7 @@ def main(argv):
         elif opt in ("--fence"): fence = True ;  node = arg
 	elif opt in ("--start"): start = True
 	elif opt in ("--stop"): stop = True
-	elif opt in ("--listnodes"): listnodes = True
+	elif opt in ("--lsnodes"): listnodes = True
 	elif opt in ("--listservices"): listservices = True
 	elif opt in ("--listdomains"): listdomains = True
 	elif opt in ("--addnode"): addnode = True ; node = arg 
@@ -53,6 +54,9 @@ def main(argv):
         elif opt in ("--createcluster"):
 	    createcluster = True
 	    clustername = arg
+	elif opt in ("--createmethod"): createmethod = True; method = arg
+	elif opt in ("--removemethod"): removemethod = True; method = arg
+	elif opt in ("--node"): node = arg
 	elif opt in ("-d"): debug = True
 	 
     if (getconf): get_cluster_conf(hostname)
@@ -69,6 +73,8 @@ def main(argv):
     if (setversion): set_version(hostname, version)
     if (incrementversion): increment_version(hostname)
     if (createcluster): create_cluster(hostname, clustername)
+    if (createmethod): create_method(hostname, method, node)
+    if (removemethod): remove_method(hostname, method, node)
         
 def usage():
     print """
@@ -83,7 +89,7 @@ Remotely control cluster infrastructure.
       --fence <node>		Fence the node <node>
       --start			Start cluster services on host
       --stop			Stop cluster services on host
-      --listnodes		List all nodes in the cluster
+      --lsnodes			List all nodes in the cluster
       --listservices		List all services in the cluster
       --addnode <node>		Add node <node> to the cluster
       --removenode <node>	Remove a node from the cluster
@@ -92,6 +98,20 @@ Remotely control cluster infrastructure.
       --incversion		Increment the cluster.conf version by 1
       				scp and put them in the current directory
       --createcluster <cluster>	Create a new cluster.conf
+      --createmethod <method> --node <node>
+      				Add a method to a specific node
+      --removemethod <method> --node <node>
+      				Remove a method from a specific node
+      --addfencedev <device> <options>
+      				Add fence device
+      --removefencedev <fence device name>
+      				Remove fence device
+      --addfenceinst <fence device name> <node> <method> <options>
+      				Add fence instance
+      --removefenceinst <fence instance name>
+      				Remove fence instance
+      --listfencedevices	Lists available fence devices and their options
+      --listfenceinstances	Lists available fence instances and their options
   """
 
 def fence_node(hostname, node):
@@ -158,8 +178,8 @@ def add_node(hostname, node_to_add):
     node.setAttribute("nodeid",str(nodeid))
     node.setAttribute("votes","1")
     dom.getElementsByTagName("clusternodes")[0].appendChild(node)
-    print "Add node"
     set_cluster_conf(hostname,dom.toxml())
+    print "Node %s added." % (node_to_add)
 
 def remove_node(hostname, node_to_remove):
     nodeFound = False
@@ -230,6 +250,56 @@ def empty_cluster_conf(name="cluster"):
 def create_cluster(hostname, clustername):
     xml = empty_cluster_conf(clustername)
     set_cluster_conf(hostname,xml)
+
+def create_method(hostname, method, nodename):
+    method_found = False
+    node_found = False
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    for node in dom.getElementsByTagName('clusternode'):
+	if (node.getAttribute("name") == nodename):
+	    node_found = True
+	    for methodnode in node.getElementsByTagName("method"):
+		if methodnode.getAttribute("name") == method:
+		    method_found = True
+		    break
+	    break
+
+    if node_found == False:
+	print "Node %s does not exist in cluster.conf." % (nodename)
+	sys.exit(1)
+    if method_found == True:
+	print "Method %s already exists in cluster.conf." % (method)
+	sys.exit(1)
+
+    methodnode = dom.createElement("method")
+    methodnode.setAttribute("name", method)
+    node.appendChild(methodnode)
+    set_cluster_conf(hostname, dom.toxml())	
+    print "Method %s added to %s." % (method, nodename)
+
+def remove_method(hostname, method, nodename):
+    method_found = False
+    node_found = False
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    for node in dom.getElementsByTagName('clusternode'):
+	if (node.getAttribute("name") == nodename):
+	    node_found = True
+	    for methodnode in node.getElementsByTagName("method"):
+		if methodnode.getAttribute("name") == method:
+		    method_found = True
+		    break
+	    break
+
+    if node_found == False:
+	print "Node %s does not exist in cluster.conf." % (nodename)
+	sys.exit(1)
+    if method_found == False:
+	print "Method %s is not present for %s." % (method, nodename)
+	sys.exit(1)
+
+    node.removeChild(methodnode)
+    set_cluster_conf(hostname, dom.toxml())	
+    print "Method %s removed from %s." % (method, nodename)
 
 def set_cluster_conf(hostname,xml):
     xml = xml.replace('<?xml version="1.0" ?>','')
