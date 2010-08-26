@@ -37,32 +37,33 @@ def main(argv):
         elif opt in ("--host","-h"):
             hostname = arg
             logging.debug("Hostname = %s" % hostname)
-	elif opt in ("--password", "-p"): passwordset = True ; password = arg
+        elif opt in ("--password", "-p"): passwordset = True ; password = arg
         elif opt in ("--getconf"): getconf = True
         elif opt in ("--status"): status = True
         elif opt in ("--fence"): fence = True ;  node = arg
-	elif opt in ("--start"): start = True
-	elif opt in ("--stop"): stop = True
-	elif opt in ("--lsnodes"): listnodes = True
-	elif opt in ("--listservices"): listservices = True
-	elif opt in ("--listdomains"): listdomains = True
-	elif opt in ("--addnode"): addnode = True ; node = arg 
-	elif opt in ("--removenode"): removenode = True ; node = arg 
-	elif opt in ("--getversion"): getversion = True
-	elif opt in ("--setversion"): setversion = True ; version = arg 
-	elif opt in ("--incversion"): incrementversion = True
+        elif opt in ("--start"): start = True
+        elif opt in ("--stop"): stop = True
+        elif opt in ("--lsnodes"): listnodes = True
+        elif opt in ("--listservices"): listservices = True
+        elif opt in ("--listdomains"): listdomains = True
+        elif opt in ("--addnode"): addnode = True ; node = arg 
+        elif opt in ("--removenode"): removenode = True ; node = arg 
+        elif opt in ("--getversion"): getversion = True
+        elif opt in ("--setversion"): setversion = True ; version = arg 
+        elif opt in ("--incversion"): incrementversion = True
         elif opt in ("--createcluster"):
-	    createcluster = True
-	    clustername = arg
-	elif opt in ("--createmethod"): createmethod = True; method = arg
-	elif opt in ("--removemethod"): removemethod = True; method = arg
-	elif opt in ("--node"): node = arg
+            createcluster = True
+            clustername = arg
+        elif opt in ("--createmethod"): createmethod = True; method = arg
+        elif opt in ("--removemethod"): removemethod = True; method = arg
+        elif opt in ("--node"): node = arg
         elif opt in ("--addfencedev"):
-	    addfencedev = True
-	    name = arg
-	    options = args
-	elif opt in ("-d"): debug = True
-	 
+            addfencedev = True
+            name = arg
+            options = args
+        elif opt in ("--removefencedev"): removefencedev = True; name = arg
+        elif opt in ("-d"): debug = True
+
     if (getconf): get_cluster_conf(hostname)
     if (status): get_cluster_status(hostname)
     if (fence): fence_node(hostname, node)
@@ -80,6 +81,7 @@ def main(argv):
     if (createmethod): create_method(hostname, method, node)
     if (removemethod): remove_method(hostname, method, node)
     if (addfencedev): add_fencedev(hostname, name, options)
+    if (removefencedev): remove_fencedev(hostname, name)
         
 def usage():
     print """
@@ -335,7 +337,22 @@ def add_fencedev(hostname, name, options):
     fencedevelem = dom.getElementsByTagName('fencedevices')[0]
     fencedevelem.appendChild(newfencedev)
     set_cluster_conf(hostname, dom.toxml())
-    
+
+def remove_fencedev(hostname, name):
+    fencedev_found = False
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+
+    # Verify fence device exists before attempting to remove
+    for fencedev in dom.getElementsByTagName('fencedevice'):
+        if fencedev.getAttribute("name") == name:
+            fencedev.parentNode.removeChild(fencedev)
+            fencedev_found = True
+
+    if fencedev_found == False:
+        print "Fence device '%s' does not exist in cluster.conf." % name
+        sys.exit(1)
+
+    set_cluster_conf(hostname, dom.toxml())
 
 def set_cluster_conf(hostname,xml):
     xml = xml.replace('<?xml version="1.0" ?>','')
