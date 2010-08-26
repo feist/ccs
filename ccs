@@ -57,6 +57,10 @@ def main(argv):
 	elif opt in ("--createmethod"): createmethod = True; method = arg
 	elif opt in ("--removemethod"): removemethod = True; method = arg
 	elif opt in ("--node"): node = arg
+        elif opt in ("--addfencedev"):
+	    addfencedev = True
+	    name = arg
+	    options = args
 	elif opt in ("-d"): debug = True
 	 
     if (getconf): get_cluster_conf(hostname)
@@ -75,6 +79,7 @@ def main(argv):
     if (createcluster): create_cluster(hostname, clustername)
     if (createmethod): create_method(hostname, method, node)
     if (removemethod): remove_method(hostname, method, node)
+    if (addfencedev): add_fencedev(hostname, name, options)
         
 def usage():
     print """
@@ -163,7 +168,7 @@ def add_node(hostname, node_to_add):
     dom = minidom.parseString(get_cluster_conf_xml(hostname))
     for node in dom.getElementsByTagName('clusternode'):
         if (node.getAttribute("name") == node_to_add):
-            print "A node already exists with name: %s" % node_to_add
+            print "Node '%s' already exists in cluster.conf" % node_to_add
             sys.exit(1)
 	nodeid_list.update(node.getAttribute("nodeid"))
     node = dom.createElement("clusternode")
@@ -265,10 +270,10 @@ def create_method(hostname, method, nodename):
 	    break
 
     if node_found == False:
-	print "Node %s does not exist in cluster.conf." % (nodename)
+	print "Node '%s' does not currently exist in cluster.conf." % (nodename)
 	sys.exit(1)
     if method_found == True:
-	print "Method %s already exists in cluster.conf." % (method)
+	print "Method '%s' already exists in cluster.conf." % (method)
 	sys.exit(1)
 
     methodnode = dom.createElement("method")
@@ -300,6 +305,37 @@ def remove_method(hostname, method, nodename):
     node.removeChild(methodnode)
     set_cluster_conf(hostname, dom.toxml())	
     print "Method %s removed from %s." % (method, nodename)
+
+def add_fencedev(hostname, name, options):
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+
+    # Verify fencedevices section exists in cluster.conf
+    fencedevices = dom.getElementsByTagName('fencedevices')
+    if len(fencedevices) == 0:
+        dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("fencedevices"))
+    elif len(fencedevices) > 1:
+        print "Error: Too many fencedevices elements in cluster.conf"
+        sys.exit(1)
+    
+    # Verify fence device with same name does not already exist
+    for fencedev in dom.getElementsByTagName('fencedevice'):
+        if fencedev.getAttribute("name") == name:
+            print "Fence device '%s' already exists in cluster.conf." % name
+            sys.exit(1)
+
+    newfencedev = dom.createElement("fencedevice")
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        newfencedev.setAttribute(attr,val)
+
+    newfencedev.setAttribute("name", name)
+    fencedevelem = dom.getElementsByTagName('fencedevices')[0]
+    fencedevelem.appendChild(newfencedev)
+    set_cluster_conf(hostname, dom.toxml())
+    
 
 def set_cluster_conf(hostname,xml):
     xml = xml.replace('<?xml version="1.0" ?>','')
