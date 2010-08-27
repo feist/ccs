@@ -21,14 +21,16 @@ def main(argv):
     incrementversion = setversion = False
     createmethod = removemethod = createcluster = False
     addfencedev = removefencedev = False
+    addfenceinst = removefenceinst = False
     passwordset = False
     global password
     global debug
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
         opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","lsnodes",
-	  "listservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
-	  "createcluster=", "password=", "createmethod=", "removemethod=", "node=", "addfencedev=", "removefencedev="])
+      "listservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
+      "createcluster=", "password=", "createmethod=", "removemethod=", "node=", "addfencedev=", "removefencedev=",
+      "addfenceinst=", "removefenceinst="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -62,6 +64,14 @@ def main(argv):
             name = arg
             options = args
         elif opt in ("--removefencedev"): removefencedev = True; name = arg
+        elif opt in ("--addfenceinst"):
+            addfenceinst = True
+            name = arg
+            options = args
+        elif opt in ("--removefenceinst"):
+            removefenceinst = True;
+            name = arg
+            options = args
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf(hostname)
@@ -82,43 +92,46 @@ def main(argv):
     if (removemethod): remove_method(hostname, method, node)
     if (addfencedev): add_fencedev(hostname, name, options)
     if (removefencedev): remove_fencedev(hostname, name)
+    if (addfenceinst): add_fenceinst(hostname, name, options)
+    if (removefenceinst): remove_fenceinst(hostname, name, options)
         
 def usage():
     print """
 Usage: ccs [OPTION]
 Remotely control cluster infrastructure.
 
-      --help			Display this help and exit
-  -h, --host			Ricci host to connect to (defaults to localhost)
-  -p, --password		Root password for node running ricci
-      --getconf			Print current cluster.conf file
-      --status			Print current cluster status
-      --fence <node>		Fence the node <node>
-      --start			Start cluster services on host
-      --stop			Stop cluster services on host
-      --lsnodes			List all nodes in the cluster
-      --listservices		List all services in the cluster
-      --addnode <node>		Add node <node> to the cluster
-      --removenode <node>	Remove a node from the cluster
-      --getversion		Get the current cluster.conf version
-      --setversion		Set the cluster.conf version
-      --incversion		Increment the cluster.conf version by 1
-      				scp and put them in the current directory
-      --createcluster <cluster>	Create a new cluster.conf
+      --help            Display this help and exit
+  -h, --host            Ricci host to connect to (defaults to localhost)
+  -p, --password        Root password for node running ricci
+      --getconf            Print current cluster.conf file
+      --status            Print current cluster status
+      --fence <node>        Fence the node <node>
+      --start            Start cluster services on host
+      --stop            Stop cluster services on host
+      --lsnodes            List all nodes in the cluster
+      --listservices        List all services in the cluster
+      --addnode <node>        Add node <node> to the cluster
+      --removenode <node>    Remove a node from the cluster
+      --getversion        Get the current cluster.conf version
+      --setversion        Set the cluster.conf version
+      --incversion        Increment the cluster.conf version by 1
+                    scp and put them in the current directory
+      --createcluster <cluster>    Create a new cluster.conf
       --createmethod <method> --node <node>
-      				Add a method to a specific node
+                    Add a method to a specific node
       --removemethod <method> --node <node>
-      				Remove a method from a specific node
+                    Remove a method from a specific node
       --addfencedev <device> <options>
-      				Add fence device
+                    Add fence device
       --removefencedev <fence device name>
-      				Remove fence device
+                    Remove fence device
       --addfenceinst <fence device name> <node> <method> <options>
-      				Add fence instance
-      --removefenceinst <fence instance name>
-      				Remove fence instance
-      --listfencedevices	Lists available fence devices and their options
-      --listfenceinstances	Lists available fence instances and their options
+                    Add fence instance
+      --removefenceinst <fence device name> <node> <method>
+                    Remove all instances of the fence device listed from the
+                    given method and node
+      --listfencedevices    Lists available fence devices and their options
+      --listfenceinstances    Lists available fence instances and their options
   """
 
 def fence_node(hostname, node):
@@ -172,7 +185,7 @@ def add_node(hostname, node_to_add):
         if (node.getAttribute("name") == node_to_add):
             print "Node '%s' already exists in cluster.conf" % node_to_add
             sys.exit(1)
-	nodeid_list.update(node.getAttribute("nodeid"))
+        nodeid_list.update(node.getAttribute("nodeid"))
     node = dom.createElement("clusternode")
     node.setAttribute("name",node_to_add)
 
@@ -180,7 +193,7 @@ def add_node(hostname, node_to_add):
     nodeid = 0
     while (True):
         nodeid = nodeid + 1
-	if (str(nodeid) not in nodeid_list): break
+        if (str(nodeid) not in nodeid_list): break
 
     node.setAttribute("nodeid",str(nodeid))
     node.setAttribute("votes","1")
@@ -195,10 +208,11 @@ def remove_node(hostname, node_to_remove):
     for node in dom.getElementsByTagName('clusternode'):
         if (node.getAttribute("name") == node_to_remove):
             node.parentNode.removeChild(node)
-	    nodeFound = True
+            nodeFound = True
+
     if (nodeFound == False):
         print "Unable to find node %s" % node_to_remove
-	sys.exit(1)
+        sys.exit(1)
 
     set_cluster_conf(hostname,dom.toxml())
 
@@ -263,25 +277,25 @@ def create_method(hostname, method, nodename):
     node_found = False
     dom = minidom.parseString(get_cluster_conf_xml(hostname))
     for node in dom.getElementsByTagName('clusternode'):
-	if (node.getAttribute("name") == nodename):
-	    node_found = True
-	    for methodnode in node.getElementsByTagName("method"):
-		if methodnode.getAttribute("name") == method:
-		    method_found = True
-		    break
-	    break
+        if (node.getAttribute("name") == nodename):
+            node_found = True
+            for methodnode in node.getElementsByTagName("method"):
+                if methodnode.getAttribute("name") == method:
+                    method_found = True
+                    break
+            break
 
     if node_found == False:
-	print "Node '%s' does not currently exist in cluster.conf." % (nodename)
-	sys.exit(1)
+        print "Node '%s' does not currently exist in cluster.conf." % (nodename)
+        sys.exit(1)
     if method_found == True:
-	print "Method '%s' already exists in cluster.conf." % (method)
-	sys.exit(1)
+        print "Method '%s' already exists in cluster.conf." % (method)
+        sys.exit(1)
 
     methodnode = dom.createElement("method")
     methodnode.setAttribute("name", method)
     node.appendChild(methodnode)
-    set_cluster_conf(hostname, dom.toxml())	
+    set_cluster_conf(hostname, dom.toxml())
     print "Method %s added to %s." % (method, nodename)
 
 def remove_method(hostname, method, nodename):
@@ -289,23 +303,23 @@ def remove_method(hostname, method, nodename):
     node_found = False
     dom = minidom.parseString(get_cluster_conf_xml(hostname))
     for node in dom.getElementsByTagName('clusternode'):
-	if (node.getAttribute("name") == nodename):
-	    node_found = True
-	    for methodnode in node.getElementsByTagName("method"):
-		if methodnode.getAttribute("name") == method:
-		    method_found = True
-		    break
-	    break
+        if (node.getAttribute("name") == nodename):
+            node_found = True
+            for methodnode in node.getElementsByTagName("method"):
+                if methodnode.getAttribute("name") == method:
+                    method_found = True
+                    break
+            break
 
     if node_found == False:
-	print "Node %s does not exist in cluster.conf." % (nodename)
-	sys.exit(1)
+        print "Node %s does not exist in cluster.conf." % (nodename)
+        sys.exit(1)
     if method_found == False:
-	print "Method %s is not present for %s." % (method, nodename)
-	sys.exit(1)
+        print "Method %s is not present for %s." % (method, nodename)
+        sys.exit(1)
 
     node.removeChild(methodnode)
-    set_cluster_conf(hostname, dom.toxml())	
+    set_cluster_conf(hostname, dom.toxml())
     print "Method %s removed from %s." % (method, nodename)
 
 def add_fencedev(hostname, name, options):
@@ -354,6 +368,80 @@ def remove_fencedev(hostname, name):
 
     set_cluster_conf(hostname, dom.toxml())
 
+def add_fenceinst(hostname, name, options):
+    fencedev_found = method_found = False
+
+    if len(options) < 2:
+        usage()
+        sys.exit(2)
+        
+    nodename = options[0]
+    methodname = options[1]
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+
+    # Verify fence device exists
+    for fencedev in dom.getElementsByTagName('fencedevice'):
+        if fencedev.getAttribute("name") == name:
+            fencedev_found = True
+            break
+    
+    # Verify method exists for specified node
+    for node in dom.getElementsByTagName('clusternode'):
+        if node.getAttribute("name") == nodename:
+            for method in node.getElementsByTagName('method'):
+                if method.getAttribute("name") == methodname:
+                    method_found = True
+                    break
+            break 
+
+    if fencedev_found == False:
+        print "Fence device '%s' not found." % name
+        sys.exit(1)
+
+    if method_found == False:
+        print "Method '%s' not found in node '%s'." % (methodname, nodename)
+        sys.exit(1)
+
+    newfenceinst = dom.createElement("device")
+    for option in options[2:]:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        newfenceinst.setAttribute(attr,val)
+
+    newfenceinst.setAttribute("name", name)
+    method.appendChild(newfenceinst)
+    set_cluster_conf(hostname, dom.toxml())
+    
+def remove_fenceinst(hostname, name, options):
+    fenceinst_found = False
+
+    if len(options) < 2:
+        usage()
+        sys.exit(2)
+        
+    nodename = options[0]
+    methodname = options[1]
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+
+    # Verify fence instance exists before attempting to remove
+    for node in dom.getElementsByTagName('clusternode'):
+        if node.getAttribute("name") == nodename:
+            for method in node.getElementsByTagName('method'):
+                if method.getAttribute("name") == methodname:
+                    for instance in method.getElementsByTagName('device'):
+                        if instance.getAttribute("name") == name:
+                            instance.parentNode.removeChild(instance)
+                            fenceinst_found = True
+
+
+    if fenceinst_found == False:
+        print "Fence instance '%s' for node '%s' in method '%s' does not exist in cluster.conf." % (name, nodename, methodname)
+        sys.exit(1)
+
+    set_cluster_conf(hostname, dom.toxml())
+
 def set_cluster_conf(hostname,xml):
     xml = xml.replace('<?xml version="1.0" ?>','')
     log_msg ("Empty cluster file created:")
@@ -366,11 +454,10 @@ def send_ricci_command(hostname, module, command, *vars):
 
     for value in vars:
         variables = variables + '<var mutable="false" name="%s" type="%s" value="%s">' % (value[0],value[1],value[2])
-	if (len(value) > 3):
-	    variables = variables + value[3]
-	variables = variables + "</var>"
+        if (len(value) > 3):
+            variables = variables + value[3]
+        variables = variables + "</var>"
 
-    
     # If a password is set, then we authenticate
     if password != None:
         msg = '<ricci function="authenticate" password="%s" version="1.0"/>' % password
@@ -380,7 +467,7 @@ def send_ricci_command(hostname, module, command, *vars):
         if (ricci_elem[0].getAttribute("authenticated") != "true"): 
             print "Unable to authenticate with ricci node, please check root password."
             sys.exit(1)
-	
+    
     msg = '<ricci function="process_batch" async="false" version="1.0"><batch><module name="%s"><request API_version="1.0"><function_call name="%s">%s</function_call></request></module></batch></ricci>' % (module,command,variables)
     res = send_to_ricci(hostname, msg)
     dom = minidom.parseString(res[1].replace('\t',''))
@@ -397,9 +484,9 @@ def send_to_ricci(hostname, msg):
     # If not we need to autogenerate them (including creating an
     # openssl configuration file
     if (os.path.isfile(cert) == False or os.path.isfile(key) == False):
-	print "Autogenerating private key and certificate."
-	if not os.path.exists(os.path.expanduser("~/.ricci")):
-	    os.mkdir(os.path.expanduser("~/.ricci"),0700);
+        print "Autogenerating private key and certificate."
+        if not os.path.exists(os.path.expanduser("~/.ricci")):
+            os.mkdir(os.path.expanduser("~/.ricci"),0700);
         f = open (config, 'w')
         f.write("""
       [ req ]
@@ -424,10 +511,10 @@ def send_to_ricci(hostname, msg):
 
     ss = ssl.wrap_socket(s, key, cert)
     try:
-	ss.connect((hostname, RICCI_PORT))
+        ss.connect((hostname, RICCI_PORT))
     except socket.error:
-	print "Unable to connect to %s, make sure the ricci server is started." % hostname
-	sys.exit(1)
+        print "Unable to connect to %s, make sure the ricci server is started." % hostname
+        sys.exit(1)
 
     log_msg ("***Sending to ricci server:")
     log_msg (msg)
