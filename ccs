@@ -29,7 +29,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","lsnodes",
       "listservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
-      "createcluster=", "password=", "createmethod=", "removemethod=", "node=", "addfencedev=", "removefencedev=",
+      "createcluster=", "password=", "createmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst="])
     except getopt.GetoptError:
         usage()
@@ -56,9 +56,14 @@ def main(argv):
         elif opt in ("--createcluster"):
             createcluster = True
             clustername = arg
-        elif opt in ("--createmethod"): createmethod = True; method = arg
-        elif opt in ("--removemethod"): removemethod = True; method = arg
-        elif opt in ("--node"): node = arg
+        elif opt in ("--createmethod"):
+            createmethod = True
+            method = arg
+            options = args
+        elif opt in ("--removemethod"):
+            removemethod = True
+            method = arg
+            options = args
         elif opt in ("--addfencedev"):
             addfencedev = True
             name = arg
@@ -88,8 +93,8 @@ def main(argv):
     if (setversion): set_version(hostname, version)
     if (incrementversion): increment_version(hostname)
     if (createcluster): create_cluster(hostname, clustername)
-    if (createmethod): create_method(hostname, method, node)
-    if (removemethod): remove_method(hostname, method, node)
+    if (createmethod): create_method(hostname, method, options)
+    if (removemethod): remove_method(hostname, method, options)
     if (addfencedev): add_fencedev(hostname, name, options)
     if (removefencedev): remove_fencedev(hostname, name)
     if (addfenceinst): add_fenceinst(hostname, name, options)
@@ -117,9 +122,9 @@ Remotely control cluster infrastructure.
       --incversion        Increment the cluster.conf version by 1
                     scp and put them in the current directory
       --createcluster <cluster>    Create a new cluster.conf
-      --createmethod <method> --node <node>
+      --createmethod <method> <node>
                     Add a method to a specific node
-      --removemethod <method> --node <node>
+      --removemethod <method> <node>
                     Remove a method from a specific node
       --addfencedev <device> <options>
                     Add fence device
@@ -272,9 +277,16 @@ def create_cluster(hostname, clustername):
     xml = empty_cluster_conf(clustername)
     set_cluster_conf(hostname,xml)
 
-def create_method(hostname, method, nodename):
+def create_method(hostname, method, options):
     method_found = False
     node_found = False
+
+    if len(options) != 1:
+        usage()
+        sys.exit(2)
+
+    nodename = options[0]
+
     dom = minidom.parseString(get_cluster_conf_xml(hostname))
     for node in dom.getElementsByTagName('clusternode'):
         if (node.getAttribute("name") == nodename):
@@ -298,9 +310,15 @@ def create_method(hostname, method, nodename):
     set_cluster_conf(hostname, dom.toxml())
     print "Method %s added to %s." % (method, nodename)
 
-def remove_method(hostname, method, nodename):
+def remove_method(hostname, method, options):
     method_found = False
     node_found = False
+    
+    if len(options) != 1:
+        usage()
+        sys.exit(2)
+
+    nodename = options[0]
     dom = minidom.parseString(get_cluster_conf_xml(hostname))
     for node in dom.getElementsByTagName('clusternode'):
         if (node.getAttribute("name") == nodename):
