@@ -101,42 +101,43 @@ def main(argv):
     if (removefenceinst): remove_fenceinst(hostname, name, options)
         
 def usage():
-    print """
-Usage: ccs [OPTION]
+    print """Usage: ccs [OPTION]...
 Remotely control cluster infrastructure.
 
       --help            Display this help and exit
   -h, --host            Ricci host to connect to (defaults to localhost)
   -p, --password        Root password for node running ricci
-      --getconf            Print current cluster.conf file
-      --status            Print current cluster status
-      --fence <node>        Fence the node <node>
-      --start            Start cluster services on host
+      --getconf         Print current cluster.conf file
+      --status          Print current cluster status
+      --fence <node>    Fence the node <node>
+      --start           Start cluster services on host
       --stop            Stop cluster services on host
-      --lsnodes            List all nodes in the cluster
-      --listservices        List all services in the cluster
-      --addnode <node>        Add node <node> to the cluster
-      --removenode <node>    Remove a node from the cluster
-      --getversion        Get the current cluster.conf version
-      --setversion        Set the cluster.conf version
-      --incversion        Increment the cluster.conf version by 1
-                    scp and put them in the current directory
-      --createcluster <cluster>    Create a new cluster.conf
+      --lsnodes         List all nodes in the cluster
+      --listservices    List all services in the cluster
+      --addnode <node>  Add node <node> to the cluster
+      --removenode <node>
+                        Remove a node from the cluster
+      --getversion      Get the current cluster.conf version
+      --setversion      Set the cluster.conf version
+      --incversion      Increment the cluster.conf version by 1
+                        scp and put them in the current directory
+      --createcluster <cluster>
+                        Create a new cluster.conf
       --createmethod <method> <node>
-                    Add a method to a specific node
+                        Add a method to a specific node
       --removemethod <method> <node>
-                    Remove a method from a specific node
+                        Remove a method from a specific node
       --addfencedev <device> <options>
-                    Add fence device
+                        Add fence device
       --removefencedev <fence device name>
-                    Remove fence device
+                        Remove fence device
       --addfenceinst <fence device name> <node> <method> <options>
-                    Add fence instance
+                        Add fence instance
       --removefenceinst <fence device name> <node> <method>
-                    Remove all instances of the fence device listed from the
-                    given method and node
-      --listfencedevices    Lists available fence devices and their options
-      --listfenceinstances    Lists available fence instances and their options
+                        Remove all instances of the fence device listed from
+			the given method and node
+      --lsfencedev	Lists available fence devices and their options
+      --lsfenceinst	Lists available fence instances and their options
   """
 
 def fence_node(hostname, node):
