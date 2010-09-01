@@ -1,0 +1,3926 @@
+<grammar  datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes"
+xmlns="http://relaxng.org/ns/structure/1.0"
+xmlns:rha="http://redhat.com/~pkennedy/annotation_namespace/cluster_conf_annot_namespace">
+
+<!-- The cluster.conf schema follows this outline:
+
+cluster
+- cman
+- totem
+- quorumd
+- fence_daemon
+- fence_xvmd
+- dlm
+- gfs_controld
+- group
+- logging
+- clusternodes
+- fencedevices
+- rm
+- clvmd
+
+Element defnitions:
+- Resource
+- Fence
+
+To validate your cluster.conf against this schema, run:
+
+  xmllint \-\-relaxng cluster.rng /path/to/cluster.conf
+
+-->
+
+<start>
+<element name="cluster" rha:description="Defines cluster properties, and
+    contains all other configuration. cluster.conf(5)">
+ <attribute name="name" rha:description="Name of the cluster.
+     cluster.conf(5)"/>
+ <attribute name="config_version" rha:description="Revision level
+     of cluster.conf file. cluster.conf(5)"/>
+ <interleave>
+
+<!-- cman block -->
+ <optional>
+   <element name="cman" rha:description="The cman element contains
+       attributes that define the following cluster-wide parameters and
+       behaviors: whether the cluster is a two-node cluster, expected
+       votes, user-specified multicast address, and logging.">
+    <optional>
+     <attribute name="two_node" rha:description="The two_node attribute
+         allows you to configure a cluster with only two
+         nodes. Ordinarily, the loss of quorum after one of two nodes
+         fails prevents the remaining node from continuing (if both
+         nodes have one vote.) To enable a two-node cluster, set the
+         two_node value equal to 1. If the two_node value is enabled,
+         the expected_votes value must be set to 1." rha:sample="1"/>
+    </optional>
+    <optional>
+     <attribute name="expected_votes" rha:description="The expected
+         votes value is used by cman to determine quorum. The cluster
+         is quorate if the sum of votes of members is over
+         half of the expected votes value. By default, cman sets the
+         expected votes value to be the sum of votes of all nodes listed
+         in cluster.conf. This can be overriden by setting an explicit
+         expected_votes value." rha:sample="4">
+      <data type="positiveInteger"/>
+     </attribute>
+    </optional>
+    <optional>
+     <attribute name="upgrading" rha:description="Set this if you are
+         performing a rolling upgrade of the cluster between major
+         releases." rha:sample="no"/>
+    </optional>
+    <optional>
+      <attribute name="disallowed" rha:description="Set this to 1 enable
+         cman's Disallowed mode. This is usually only needed for 
+         backwards compatibility." rha:sample="1">
+       <data type="nonNegativeInteger"/>
+      </attribute>
+    </optional>
+    <optional>
+     <attribute name="quorum_dev_poll" rha:description="The amount of time
+         after a qdisk poll, in milliseconds, before a quorum disk is
+         considered dead. The quorum disk daemon, qdisk, periodically
+         sends hello messages to cman and ais, indicating that qdisk
+         is present. If qdisk takes more time to send a hello message
+         to cman and ais than by quorum_dev_poll, then cman declares
+         qdisk dead and prints a message indicating that connection to
+         the quorum device has been lost." rha:sample="50000">
+      <data type="nonNegativeInteger"/>
+     </attribute>
+    </optional>
+    <!--FIXME: Clarify the following. What is meant by "service"? Also, is
+     there a default value? What is a good sample value?-->
+    <optional>
+     <attribute name="shutdown_timeout" rha:description="Timeout period,
+         in milliseconds, to allow a service to respond during a
+         shutdown." rha:sample="5000">
+      <data type="nonNegativeInteger"/>
+     </attribute>
+    </optional>
+    <optional>
+     <attribute name="ccsd_poll" rha:description="" rha:sample=""
+         rha:default="1000">
+      <data type="nonNegativeInteger"/>
+     </attribute>
+    </optional>
+    <optional>
+     <attribute name="debug_mask" rha:description="" rha:sample=""/>
+    </optional>
+    <optional>
+     <attribute name="port">
+      <data type="nonNegativeInteger"/>
+     </attribute>
+    </optional>
+    <optional>
+     <attribute name="cluster_id">
+      <data type="nonNegativeInteger"/>
+     </attribute>
+    </optional>
+    <optional>
+     <attribute name="hash_cluster_id" rha:description="Enable stronger hashing of cluster ID to avoid collisions." />
+    </optional>
+    <optional>
+     <attribute name="nodename" rha:description="Local node name; this is set internally by cman-preconfig and should never be set by a user."/>
+    </optional>
+    <optional>
+     <attribute name="broadcast" rha:description="enable cman broadcast" rha:default="no"/>
+   </optional>
+    <optional>
+     <attribute name="keyfile" rha:description=""/>
+    </optional>
+    <optional>
+     <attribute name="disable_openais"/>
+    </optional>
+    <optional>
+     <element name="multicast" rha:description="The multicast element
+         provides the ability for a user to specify a multicast address
+         instead of using the multicast address generated by cman. If
+         a user does not specify a multicast address, cman creates one. It
+         forms the upper 16 bits of the multicast address with 239.192 and
+         forms the lower 16 bits based on the cluster ID."> <attribute
+         name="addr" rha:description="A multicast address specified
+         by a user. If you do specify a multicast address, you should
+         use the 239.192.x.x series that cman uses. Otherwise, using a
+         multicast address outside that range may cause unpredictable
+         results. For example, using 224.0.0.x (All hosts on the network)
+         may not be routed correctly, or even routed at all by some
+         hardware." rha:sample="239.192.0.1"/>
+     </element>
+    </optional>
+   </element>
+ </optional>
+<!-- end cman block -->
+
+<!-- totem block -->
+ <optional>
+  <element name="totem" rha:description="OpenAIS msg transport
+    protocol">
+   <optional>
+    <attribute name="consensus" rha:description="This is a timeout value
+        that specifies how many milliseconds to wait for consensus
+        to be achieved before starting a new round of membership
+        configuration." rha:default="200" rha:sample="235"/>
+   </optional>
+   <optional>
+    <attribute name="join" rha:description="This is a timeout value that
+        specifies how many milliseconds to wait for join messages in
+        the membership protocol." rha:default="100" rha:sample="95"/>
+   </optional>
+   <optional>
+    <attribute name="token" rha:description="This is a timeout value
+        that specifies how many milliseconds elapse before a
+        token loss is declared after not receiving a token. This
+        is the time spent detecting a failure of a processor in
+        the current configuration. Reforming a new configuration
+        takes about 50 milliseconds in addition to this
+        timeout." rha:default="5000" rha:sample="5300"/>
+   </optional>
+   <optional>
+    <attribute name="fail_recv_const" />
+   </optional>
+   <optional>
+    <attribute name="token_retransmits_before_loss_const"
+      rha:description="This value identifies how many token retransmits
+      should be attempted before forming a new configuration. If
+      this value is set, retransmit and hold will be automatically
+      calculated from retransmits_before_loss and token." rha:default="4"
+      rha:sample="5"/>
+   </optional>
+   <!-- FIXME: The following description was adapted from the man page.
+   It may be tool long for the schema docuement. Consider cutting text
+   after the second sentence and referring the reader to the openais.conf
+   man page. -->
+   <optional>
+    <attribute name="rrp_mode" rha:description="This attribute
+        specifies the redundant ring protocol mode. Its value can be
+        set to active, passive, or none. Active replication offers
+        slightly lower latency from transmit to delivery in faulty
+        network environments but with less performance. Passive
+        replication may nearly double the speed of the totem protocol
+        if the protocol doesn't become cpu bound. The final option is
+        none, in which case only one network interface is used to
+        operate the totem protocol. If only one interface directive is
+        specified, none is automatically chosen. If multiple interface
+        directives are specified, only active or passive may be
+        chosen." rha:sample="active"/>
+   </optional>
+   <optional>
+    <attribute name="secauth" rha:description="This attribute specifies
+       that HMAC/SHA1 authentication should be used to authenticate all
+       messages. It further specifies that all data should be encrypted
+       with the sober128 encryption algorithm to protect data from
+       eavesdropping. For more information setting this value, refer
+       the the openais.conf man page." rha:default="on" rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="keyfile" rha:description="" rha:sample=""/>
+   </optional>
+   <!-- multicast address -->
+   <zeroOrMore>
+    <element name="interface" rha:description="Defines Totem interface options.  corosync.conf(5)" rha:sample="">
+     <optional>
+      <attribute name="ringnumber" rha:description="Sets the ring interface for the interface for RRP mode.  corosync.conf(5)" rha:sample=""/>
+     </optional>
+     <optional>
+      <attribute name="bindnetaddr" rha:description="Specifies the address to which the corosync executive should bind.  corosync.conf(5)" rha:sample=""/>
+     </optional>
+     <optional>
+      <attribute name="mcastaddr" rha:description="Defines the multicast address used by corosync for this interface.  corosync.conf(5)" rha:sample=""/>
+     </optional>
+     <optional>
+      <attribute name="mcastport" rha:description="Specifies the UDP port number when using multicast.  corosync.conf(5)" rha:sample=""/>
+     </optional>
+     <optional>
+      <attribute name="broadcast" rha:description="If set to yes, use broadcast instead of multicast for communication.  corosync.conf(5)" rha:sample=""/>
+     </optional>
+    </element>
+   </zeroOrMore>
+  </element>
+ </optional>
+<!-- end totem block -->
+
+<!-- quorumd block -->
+ <optional>
+  <element name="quorumd" rha:description="This element and its
+      attributes define parameters for the quorum disk daemon,
+      quorumd. qdisk(5).">
+   <optional>
+    <attribute name="interval" rha:description="The frequency of
+        read/write cycles, in seconds. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="tko" rha:description="The number of cycles a node
+        must miss to be declared dead. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="votes" rha:description="The number of votes the
+        quorum daemon advertises to CMAN when it has a high enough
+        score. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="min_score" rha:description="The minimum score for a
+        node to be considered alive. If omitted or set to 0, the default
+        function, floor((n+1)/2), is used, where n is the sum of the
+        heuristics scores. The Minimum Score value must never exceed the
+        sum of the heuristic scores; otherwise, the quorum disk cannot
+        be available. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="device" rha:description="The storage device the
+        quorum daemon uses. The device must be the same on all
+        nodes. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="label" rha:description="Specifies the quorum disk
+        label created by the mkqdisk utility. If this field contains an
+        entry, the label overrides the Device field. If this field is
+        used, the quorum daemon reads /proc/partitions and checks for
+        qdisk signatures on every block device found, comparing the
+        label against the specified label. This is useful in configurations
+        where the quorum device name differs among nodes. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="cman_label" rha:description="This is the name used by CMAN for the quorum device instead of the device name. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="status_file" rha:description="Debugging file. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="scheduler" rha:description="Scheduler. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="reboot" rha:description="Reboot if our score drops too low.  qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="priority" rha:description="Scheduler priority. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="stop_cman" rha:description="Stop cman if the quorum disk cannot be found during startup. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="paranoid" rha:description="Reboot if we are running too slowly.  qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="allow_kill" rha:description="Instruct cman to evict nodes which are not updating the quorum disk. qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="max_error_cycles" rha:description="Die after this many cycles which receive I/O errors.  qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="io_timeout" rha:description="Die if we cannot get a write out to disk after interval*tko.  qdisk(5)." rha:sample=""/>
+   </optional>
+   <optional>
+    <attribute name="master_wins" rha:description="Enable master-wins mode (two node clusters).  qdisk(5)." rha:sample=""/>
+   </optional>
+   <zeroOrMore>
+    <element name="heuristic" rha:description="Defines a heuristic. qdisk(5).">
+     <attribute name="program" rha:description="The program used to
+         determine if this heuristic is alive. This can be anything that
+         can be executed by /bin/sh -c. A return value of 0 indicates
+         success; anything else indicates failure." rha:sample=""/>
+     <optional>
+      <attribute name="score" rha:description="The weight of this
+          heuristic. Be careful when determining scores for
+          heuristics." rha:default="1" rha:sample=""/>
+     </optional>
+     <optional>
+      <attribute name="interval" rha:description="The frequency (in
+          seconds) at which the heuristic is polled.  qdisk(5)." rha:default="2"
+          rha:sample=""/>
+     </optional>
+     <optional>
+      <attribute name="tko" rha:description="The number of consecutive failures before a heuristic is discounted.  qdisk(5)." rha:sample=""/>
+     </optional>
+    </element>
+   </zeroOrMore>
+  </element>
+ </optional>
+<!-- end quorumd block -->
+
+<!-- fence_daemon block -->
+ <optional>
+  <element name="fence_daemon" rha:description="Configuration for fenced
+	daemon. fenced(8)">
+   <optional>
+    <attribute name="post_join_delay" rha:description="Number of seconds
+	the daemon will wait before fencing any victims after a node joins
+	the fence domain. fenced(8)"/>
+   </optional>
+   <optional>
+    <attribute name="post_fail_delay" rha:description="Number of seconds
+	the daemon will wait before fencing any victims after a node
+	fails. fenced(8)"/>
+   </optional>
+   <optional>
+    <attribute name="override_path" rha:description="Location of a FIFO
+	used for communication between fenced and fence_ack_manual.
+	fenced(8)"/>
+   </optional>
+   <optional>
+    <attribute name="override_time" rha:description="Number of seconds to
+	wait for a manual override after a failed fencing attempt before
+	the next attempt. fenced(8)"/>
+   </optional>
+   <optional>
+    <attribute name="clean_start" rha:description="Set to 1 to disable
+	startup fencing. fenced(8)"/>
+   </optional>
+
+   <optional>
+    <attribute name="skip_undefined" rha:description="Set to 1 to disable
+	startup fencing of nodes with no fence methods defined.
+	fenced(8)"/>
+   </optional>
+  </element>
+ </optional>
+<!-- end fence_daemon block -->
+
+<!-- fence_xvmd block -->
+ <optional>
+  <element name="fence_xvmd" rha:description="Fence_xvm daemon. The
+      fence_xvmd fence device is an I/O fencing host that resides
+      on dom0 and is used in conjunction with the fence_xvm fencing
+      agent. Together, these two programs fence Xen virtual machines
+      that are in a cluster. There is a requirement that the parent
+      dom0s are also a part of their own CMAN/OpenAIS based cluster,
+      and that the dom0 cluster does not share any members with the domU
+      cluster. Furthermore, the dom0 cluster is required to have fencing
+      if domU recovery is expected to be automatic.">
+    <optional>
+      <attribute name="debug" rha:description="" >
+	<data type="integer"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="port" rha:description="" >
+	<data type="integer"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="use_uuid" rha:description="" />
+    </optional>
+    <optional>
+      <attribute name="multicast_address" rha:description="" />
+    </optional>
+    <optional>
+      <attribute name="auth" rha:description="" />
+    </optional>
+    <optional>
+      <attribute name="hash" rha:description="" />
+    </optional>
+    <optional>
+      <attribute name="uri" rha:description="" />
+    </optional>
+    <optional>
+      <attribute name="key_file" rha:description="" />
+    </optional>
+    <optional>
+      <attribute name="multicast_interface" rha:description="" />
+    </optional>
+  </element>
+ </optional>
+<!-- end fence_xvmd block -->
+
+<!-- dlm block -->
+ <optional>
+ <element name="dlm" rha:description="Configuration for dlm and
+       dlm_controld daemon. dlm_controld(8)">
+
+  <optional>
+    <attribute name="log_debug" rha:description="Set to 1 to enable
+        dlm kernel debugging messages. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="timewarn" rha:description="Number of centiseconds
+       a lock is blocked before notifying dlm_controld deadlock code.
+       dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="protocol" rha:description="The dlm lowcomms protocol.
+       dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="enable_fencing" rha:description="Fencing recovery
+       dependency. dlm_controld(8)" />
+  </optional>
+
+  <optional>
+   <attribute name="enable_quorum" rha:description="Quorum recovery
+       dependency. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="enable_deadlk" rha:description="Deadlock detection
+       capability. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="enable_plock" rha:description="Cluster fs posix
+       lock capability. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="plock_debug" rha:description="Set to 1 to enable
+       posix lock debugging. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="plock_rate_limit" rha:description="Limit the rate of
+       plock operations. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="plock_ownership" rha:description="Set to 1/0 to
+       enable/disable plock ownership. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="drop_resources_time" rha:description="Plock ownership
+       drop resources time. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="drop_resources_count" rha:description="Plock ownership
+       drop resources count. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="drop_resources_age" rha:description="Plock ownership
+       drop resources age. dlm_controld(8)"/>
+  </optional>
+
+  <optional>
+   <zeroOrMore>
+    <element name="lockspace" rha:description="Individual lockspace
+      configuration. dlm_controld(8)">
+     <attribute name="name" rha:description="Name of the lockspace.
+         dlm_controld(8)"/>
+
+     <optional>
+      <attribute name="nodir" rha:description="Set to 1 to disable the
+          internal resource directory. dlm_controld(8)"/>
+     </optional>
+
+     <optional>
+      <zeroOrMore>
+       <element name="master" rha:description="Defines a master node.
+           dlm_controld(8)">
+
+        <attribute name="name" rha:description="The name of a node that
+            should be master resources/locks. dlm_controld(8)"/>
+
+        <optional>
+        <attribute name="weight" rha:description="The proportion of
+            resources this node should master. dlm_controld(8)"/>
+        </optional>
+       </element>
+      </zeroOrMore>
+     </optional>
+
+    </element>
+   </zeroOrMore>
+  </optional>
+ </element>
+ </optional>
+<!-- end dlm block -->
+
+<!-- gfs_controld block -->
+ <optional>
+ <element name="gfs_controld" rha:description="Configuration for
+       gfs_controld daemon. gfs_controld(8)">
+
+  <optional>
+   <attribute name="enable_withdraw" rha:description="Set to 1/0 to
+       enable/disable a response to a withdraw. gfs_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="enable_plock" rha:description="Cluster fs posix
+       lock capability. gfs_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="plock_debug" rha:description="Set to 1 to enable
+       posix lock debugging. gfs_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="plock_rate_limit" rha:description="Limit the rate of
+       plock operations. gfs_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="plock_ownership" rha:description="Set to 1/0 to
+       enable/disable plock ownership. gfs_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="drop_resources_time" rha:description="Plock ownership
+       drop resources time. gfs_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="drop_resources_count" rha:description="Plock ownership
+       drop resources count. gfs_controld(8)"/>
+  </optional>
+
+  <optional>
+   <attribute name="drop_resources_age" rha:description="Plock ownership
+       drop resources age. gfs_controld(8)"/>
+  </optional>
+
+ </element>
+ </optional>
+<!-- end gfs_controld block -->
+
+<!-- group block -->
+ <optional>
+ <element name="group" rha:description="Defines groupd configuration.
+     groupd(8)">
+  <optional>
+   <attribute name="groupd_compat" rha:description="Enable compatibility with
+     cluster2 nodes. groupd(8)"/>
+  </optional>
+ </element>
+ </optional>
+<!-- end group block -->
+
+<!-- logging block -->
+ <optional>
+  <element name="logging" rha:description="Defines global logging
+      configuration, and contains daemon-specific configuration.
+      cluster.conf(5)">
+
+   <optional>
+    <attribute name="to_syslog" rha:description="Set to yes/no to
+        enable/disable messages to syslog. cluster.conf(5)"/>
+   </optional>
+
+   <optional>
+    <attribute name="to_logfile" rha:description="Set to yes/no to
+        enable/disable messages to log file. cluster.conf(5)"/>
+   </optional>
+
+   <optional>
+    <attribute name="syslog_facility" rha:description="The facility
+        used for syslog messages. cluster.conf(5)"/>
+   </optional>
+
+   <optional>
+    <attribute name="syslog_priority" rha:description="Messages at this
+        level and higher are sent to syslog. cluster.conf(5)"/>
+   </optional>
+
+   <optional>
+    <attribute name="logfile_priority" rha:description="Messages at this
+        level and higher are written to log file. cluster.conf(5)"/>
+   </optional>
+
+   <optional>
+    <attribute name="logfile" rha:description="The log file path name.
+        cluster.conf(5)"/>
+   </optional>
+
+   <optional>
+    <attribute name="debug" rha:description="Set to on to enable debugging
+        messages in log file. cluster.conf(5)"/>
+   </optional>
+
+   <zeroOrMore>
+    <element name="logging_daemon" rha:description="Defines
+        daemon-specific logging configuration. cluster.conf(5)">
+
+     <attribute name="name" rha:description="The daemon name.
+         cluster.conf(5)"/>
+
+     <optional>
+      <attribute name="subsys" rha:description="A corosync subsystem name.
+          cluster.conf(5)"/>
+     </optional>
+
+     <optional>
+      <attribute name="to_syslog" rha:description="Same as global."/>
+     </optional>
+     <optional>
+      <attribute name="to_logfile" rha:description="Same as global."/>
+     </optional>
+     <optional>
+      <attribute name="syslog_facility" rha:description="Same as global."/>
+     </optional>
+     <optional>
+      <attribute name="syslog_priority" rha:description="Same as global."/>
+     </optional>
+     <optional>
+      <attribute name="logfile_priority" rha:description="Same as global."/>
+     </optional>
+     <optional>
+      <attribute name="logfile" rha:description="Same as global."/>
+     </optional>
+     <optional>
+      <attribute name="debug" rha:description="Same as global."/>
+     </optional>
+
+    </element>
+   </zeroOrMore>
+
+  </element>
+ </optional>
+<!-- end logging block -->
+
+<!-- clusternodes block -->
+ <element name="clusternodes" rha:description="Contains all cluster
+     node definitions. cluster.conf(5)">
+
+  <zeroOrMore>
+   <element name="clusternode" rha:description="Defines cluster node
+       properties, and contains other node specific configuration.
+       cluster.conf(5)">
+
+   <attribute name="name" rha:description="The hostname or IP address
+       of the node. cluster.conf(5)"/>
+
+   <attribute name="nodeid" rha:description="A unique integer to use
+       as a node identifier. cluster.conf(5)">
+    <data type="positiveInteger"/>
+   </attribute>
+
+   <optional>
+    <attribute name="votes" rha:description="The number of votes the
+        node contributes to quorum. cman(5)">
+     <data type="positiveInteger"/>
+    </attribute>
+   </optional>
+
+   <optional>
+    <attribute name="weight" rha:description="The dlm locking weight.
+        dlm_controld(8)"/>
+   </optional>
+
+   <optional>
+    <element name="altname" rha:description="Defines a second network
+        interface to use for corosync redundant ring mode. cman(5)">
+
+     <attribute name="name" rha:description="A second hostname or IP
+        address of the node. cman(5)"/>
+
+     <optional>
+      <attribute name="port" rha:description="The network port to use
+          on the second interface. cman(5)"/>
+     </optional>
+
+     <optional>
+      <attribute name="mcast" rha:description="The multicast address
+          to use on the second interface. cman(5)"/>
+     </optional>
+    </element>
+   </optional>
+
+   <interleave>
+    <optional>
+     <ref name="FENCE"/>
+    </optional>
+    <optional>
+     <ref name="UNFENCE"/>
+    </optional>
+   </interleave>
+
+   </element>
+  </zeroOrMore>
+ </element>
+<!-- end clusternode block -->
+
+<!-- fencedevices block -->
+ <optional>
+ <element name="fencedevices" rha:description="Contains all fence
+     device definitions. fenced(8)">
+  <zeroOrMore>
+   <element name="fencedevice" rha:description="Defines fence device
+       properties. fenced(8)">
+
+     <attribute name="name" rha:description="A name that is used to
+         reference this fence device from clusternode fence section.
+         fenced(8)">
+      <data type="ID"/>
+     </attribute>
+
+     <attribute name="agent" rha:description="The fence agent to be
+         used. fenced(8)"/>
+
+     <ref name="FENCEDEVICEOPTIONS"/>
+
+    </element>
+  </zeroOrMore>
+ </element>
+ </optional>
+<!-- end fencedevices block -->
+
+<!-- rm block -->
+ <optional>
+  <element name="rm" rha:description="This element and its attributes
+      define resources (for example an IP address) required to create HA
+      cluster services, the HA cluster services themselves, and failover
+      domains for the HA cluster services.">
+   <optional>
+    <!-- FIXME: The following text needs clarifying. What is meant by
+    "...for all levels less than the selected."? -->
+    <attribute name="log_level" rha:description="An integer 0-7,
+        inclusive, for all levels less than the selected.
+        0, system is unusable, emergency;
+        1, action must be taken immediately;
+        2, critical conditions;
+        3, error conditions;
+        4, warning conditions;
+        5, normal but significant condition;
+        6, informational;
+        7, debug-level messages." rha:sample="6">
+     <data type="integer"/>
+    </attribute>
+   </optional>
+   <optional>
+    <attribute name="status_child_max" rha:description="Maximum number of status child threads." rha:sample="">
+     <data type="integer"/>
+    </attribute>
+   </optional>
+   <optional>
+    <attribute name="status_poll_interval" rha:description="Scan the resource tree every X seconds for resources which need to be checked."
+      rha:sample="">
+     <data type="integer"/>
+    </attribute>
+   </optional>
+   <optional>
+    <attribute name="transition_throttling" rha:description="During transitions, keep the event processor alive for this many seconds."
+      rha:sample="">
+     <data type="integer"/>
+    </attribute>
+   </optional>
+   <optional>
+    <attribute name="central_processing" rha:description="Enable central processing mode (requires cluster-wide shut down and restart of rgmanager.)."
+      rha:sample="">
+     <data type="integer"/>
+    </attribute>
+   </optional>
+   <optional>
+    <attribute name="log_facility" rha:description="The facility is one
+       of the following keywords: auth, authpriv, cron, daemon, kern,
+       lpr, mail, news, syslog, user, uucp and local0 through local7"/>
+   </optional>
+   <interleave>
+   <optional>
+    <element name="failoverdomains" rha:description="Failover domain definitions.">
+     <zeroOrMore>
+      <element name="failoverdomain" rha:description="Specifies
+        properties of a specific failover domain">
+       <attribute name="name" rha:description="The name of the failover
+         domain." rha:sample="foo"/>
+       <optional>
+        <attribute name="ordered" rha:description="Set value to 1 if
+          the failover domain is ordered; set value to 0 if
+          unordered." rha:default="0" rha:sample="1"/>
+       </optional>
+       <optional>
+        <attribute name="restricted" rha:description="Set value to 1 if
+          the failover domain is restricted; set value to 0 if
+          unrestricted." rha:default="0" rha:sample="1"/>
+       </optional>
+       <optional>
+        <attribute name="nofailback" rha:description="Do not move service to a more preferred node if it is currently running." rha:sample=""/>
+       </optional>
+       <zeroOrMore>
+        <element name="failoverdomainnode" rha:description="A node in
+          a failover domain">
+         <optional>
+          <attribute name="priority" rha:description="A number
+            specifying the priority; lower numbers having higher
+            priority"
+              rha:sample="1"/>
+         </optional>
+         <attribute name="name" rha:description="Name of the node."
+             rha:sample="member2"/>
+        </element>
+       </zeroOrMore>
+      </element>
+     </zeroOrMore>
+    </element>
+   </optional>  <!-- End of failoverdomains block -->
+   <optional>
+    <element name="events" rha:description="Event definitions (central_processing only).">
+     <zeroOrMore>
+      <element name="event" rha:description="Defines an event.">
+       <attribute name="name" rha:description="Symbolic name for an event." rha:sample=""/>
+       <optional>
+        <text/>
+       </optional>
+       <optional>
+        <attribute name="file" rha:description="Path to S/Lang script to execute." rha:sample=""/>
+       </optional>
+       <optional>
+        <attribute name="priority" rha:description="Order (1..99) of event." rha:sample=""/>
+       </optional>
+       <optional>
+        <attribute name="class" rha:description="Event class (service, node)." rha:sample=""/>
+       </optional>
+       <!-- Service event class attributes -->
+       <optional>
+        <attribute name="service" rha:description="(Service) The service name (service:foo) must match the specified value in order for the event script to be run." rha:sample=""/>
+       </optional>
+       <optional>
+        <attribute name="service_state" rha:description="(Service) The service's state must match the specified value in order for the script to be run (started, stopped, disabled, failed)." rha:sample=""/>
+       </optional>
+       <optional>
+        <attribute name="service_owner" rha:description="(Service) The service owner must match the specified value in order for the event script to be run." rha:sample=""/>
+       </optional>
+       <!-- Node event -->
+       <optional>
+        <attribute name="node" rha:description="(Node) The node name must match the specified value in order for the script to be run." rha:sample=""/>
+       </optional>
+       <optional>
+        <attribute name="node_id" rha:description="(Node) The node ID must match the specified value in order for the script to be run." rha:sample=""/>
+       </optional>
+       <optional>
+        <attribute name="node_state" rha:description="(Node) The node state must match the specified value (0 or 1) in order for the script to be run." rha:sample=""/>
+       </optional>
+       <optional>
+        <attribute name="node_clean" rha:description="(Node) The node must have been fenced in order for the script to be run." rha:sample=""/>
+       </optional>
+       <optional>
+        <attribute name="node_local" rha:description="(Node) This script may only run on the current central processing node." rha:sample=""/>
+       </optional>
+       <!-- Config event attributes -->
+       <!-- NOT USED -->
+      </element>
+     </zeroOrMore>
+    </element>
+   </optional>  <!-- End of events block -->
+   <optional>
+    <element name="resources" rha:description="Defines global resources which may be referenced in services.  You may redefine actions for resources here, but child resource definitions are ignored in this section.">
+     <zeroOrMore>
+      <ref name="CHILDREN"/>
+     </zeroOrMore>
+    </element>
+   </optional>
+   <zeroOrMore>
+    <ref name="SERVICE"/>
+   </zeroOrMore>
+   <zeroOrMore>
+    <ref name="VM"/>
+   </zeroOrMore>
+  </interleave>
+  </element>
+ </optional>
+
+<!-- clvmd block -->
+ <optional>
+   <element name="clvmd" rha:description="The clvmd element contains
+       attributes that define parameters for the cluster LVM daemon.">
+    <optional>
+     <attribute name="interface" rha:description="The interface attribute
+         tells clvmd which cluster interface it should use for internode
+         communications and locking. Valid values for this depend on
+         how the daemon is configured at compile-time, but are typically
+         cman, corosync or openais." rha:sample="cman"/>
+    </optional>
+   </element>
+ </optional>
+
+ </interleave>
+
+
+</element> <!-- cluster end -->
+</start>
+
+
+<!--Beginning of resource definitions-->
+<!-- Autogenerated.  Paste in to cluster.ng in the 'resources' section -->
+
+  <define name="SERVICE">
+    <element name="service" rha:description="Defines a service (resource group).">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing service resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name."/>
+        <optional>
+          <attribute name="domain" rha:description="Failover domain."/>
+        </optional>
+        <optional>
+          <attribute name="autostart" rha:description="Automatic start after quorum formation"/>
+        </optional>
+        <optional>
+          <attribute name="exclusive" rha:description="Exclusive service."/>
+        </optional>
+        <optional>
+          <attribute name="nfslock" rha:description="Enable NFS lock workarounds."/>
+        </optional>
+        <optional>
+          <attribute name="nfs_client_cache" rha:description="Enable exportfs list caching (performance)."/>
+        </optional>
+        <optional>
+          <attribute name="recovery" rha:description="Failure recovery policy (restart, relocate, or disable)."/>
+        </optional>
+        <optional>
+          <attribute name="depend" rha:description="Top-level service this depends on, in service:name format."/>
+        </optional>
+        <optional>
+          <attribute name="depend_mode" rha:description="Service dependency mode (soft or hard)."/>
+        </optional>
+        <optional>
+          <attribute name="max_restarts" rha:description="Maximum restarts for this service."/>
+        </optional>
+        <optional>
+          <attribute name="restart_expire_time" rha:description="Restart expiration time; amount of time before a restart is forgotten."/>
+        </optional>
+        <optional>
+          <attribute name="priority" rha:description="Service priority."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="IP">
+    <element name="ip" rha:description="This is an IP address.">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing ip resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="address" rha:description="IP Address"/>
+        <optional>
+          <attribute name="family" rha:description="Family"/>
+        </optional>
+        <optional>
+          <attribute name="monitor_link" rha:description="Monitor NIC Link"/>
+        </optional>
+        <optional>
+          <attribute name="nfslock" rha:description="Enable NFS lock workarounds"/>
+        </optional>
+        <optional>
+          <attribute name="sleeptime" rha:description="Amount of time (seconds) to sleep."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="NFSCLIENT">
+    <element name="nfsclient" rha:description="Defines an NFS client.">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing nfsclient resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Client Name"/>
+        <attribute name="target" rha:description="Target Hostname, Wildcard, or Netgroup"/>
+        <optional>
+          <attribute name="path" rha:description="Path to Export"/>
+        </optional>
+        <optional>
+          <attribute name="svcname" rha:description=""/>
+        </optional>
+        <optional>
+          <attribute name="fsid" rha:description="File system ID"/>
+        </optional>
+        <optional>
+          <attribute name="options" rha:description="Export Options"/>
+        </optional>
+        <optional>
+          <attribute name="allow_recover" rha:description="Allow recovery"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Service Name"/>
+        </optional>
+        <optional>
+          <attribute name="use_cache" rha:description="Enable exportfs list caching"/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="NFSEXPORT">
+    <element name="nfsexport" rha:description="This defines an NFS export.">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing nfsexport resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="device" rha:description="If you can see this, your GUI is broken."/>
+        </optional>
+        <optional>
+          <attribute name="path" rha:description="If you can see this, your GUI is broken."/>
+        </optional>
+        <optional>
+          <attribute name="fsid" rha:description="If you can see this, your GUI is broken."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="SCRIPT">
+    <element name="script" rha:description="LSB-compliant init script as a clustered resource.">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing script resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <attribute name="file" rha:description="Path to script"/>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="NETFS">
+    <element name="netfs" rha:description="Defines an NFS/CIFS file system mount.">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing netfs resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="File System Name"/>
+        <attribute name="mountpoint" rha:description="Mount Point"/>
+        <attribute name="host" rha:description="IP or Host"/>
+        <attribute name="export" rha:description="Export"/>
+        <optional>
+          <attribute name="fstype" rha:description="File System Type"/>
+        </optional>
+        <optional>
+          <attribute name="no_unmount" rha:description="Skip unmount opration"/>
+        </optional>
+        <optional>
+          <attribute name="force_unmount" rha:description="Force Unmount"/>
+        </optional>
+        <optional>
+          <attribute name="options" rha:description="Mount Options"/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="CLUSTERFS">
+    <element name="clusterfs" rha:description="Defines a cluster file system mount.">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing clusterfs resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="File System Name"/>
+        <attribute name="mountpoint" rha:description="Mount Point"/>
+        <attribute name="device" rha:description="Device or Label"/>
+        <optional>
+          <attribute name="fstype" rha:description="File system type"/>
+        </optional>
+        <optional>
+          <attribute name="force_unmount" rha:description="Force Unmount"/>
+        </optional>
+        <optional>
+          <attribute name="options" rha:description="Mount Options"/>
+        </optional>
+        <optional>
+          <attribute name="self_fence" rha:description="Seppuku Unmount"/>
+        </optional>
+        <optional>
+          <attribute name="fsid" rha:description="NFS File system ID"/>
+        </optional>
+        <optional>
+          <attribute name="nfslock" rha:description="Enable NFS lock workarounds"/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="SMB">
+    <element name="smb" rha:description="Dynamic smbd/nmbd resource agent">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing smb resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Samba Name"/>
+        <optional>
+          <attribute name="workgroup" rha:description="Workgroup name"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="APACHE">
+    <element name="apache" rha:description="Defines an Apache web server">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing apache resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="server_root" rha:description="Initial ServerRoot"/>
+        </optional>
+        <optional>
+          <attribute name="config_file" rha:description="Initial ServerConfigFile"/>
+        </optional>
+        <optional>
+          <attribute name="httpd_options" rha:description="Other command-line options for httpd"/>
+        </optional>
+        <optional>
+          <attribute name="shutdown_wait" rha:description="Wait X seconds for correct end of service shutdown"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="OPENLDAP">
+    <element name="openldap" rha:description="Defines an Open LDAP server">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing openldap resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="config_file" rha:description="Config File"/>
+        </optional>
+        <optional>
+          <attribute name="url_list" rha:description="URL list"/>
+        </optional>
+        <optional>
+          <attribute name="slapd_options" rha:description="Other command-line options for slapd"/>
+        </optional>
+        <optional>
+          <attribute name="shutdown_wait" rha:description="Wait X seconds for correct end of service shutdown"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="SAMBA">
+    <element name="samba" rha:description="Dynamic smbd/nmbd resource agent">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing samba resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Samba Name"/>
+        <optional>
+          <attribute name="config_file" rha:description="Config File"/>
+        </optional>
+        <optional>
+          <attribute name="smbd_options" rha:description="Other command-line options for smbd"/>
+        </optional>
+        <optional>
+          <attribute name="nmbd_options" rha:description="Other command-line options for nmbd"/>
+        </optional>
+        <optional>
+          <attribute name="shutdown_wait" rha:description="Wait X seconds for correct end of service shutdown"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="MYSQL">
+    <element name="mysql" rha:description="Defines a MySQL database server">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing mysql resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="config_file" rha:description="Define configuration file"/>
+        </optional>
+        <optional>
+          <attribute name="listen_address" rha:description="Define an IP address for MySQL server. If the address is not given then first IP address from the service is taken."/>
+        </optional>
+        <optional>
+          <attribute name="mysqld_options" rha:description="Other command-line options for mysqld"/>
+        </optional>
+        <optional>
+          <attribute name="startup_wait" rha:description="Wait X seconds for correct end of service startup"/>
+        </optional>
+        <optional>
+          <attribute name="shutdown_wait" rha:description="Wait X seconds for correct end of service shutdown"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="POSTGRES-8">
+    <element name="postgres-8" rha:description="Defines a PostgreSQL server">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing postgres-8 resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="config_file" rha:description="Config File"/>
+        </optional>
+        <optional>
+          <attribute name="postmaster_user" rha:description="User who runs the database server"/>
+        </optional>
+        <optional>
+          <attribute name="postmaster_options" rha:description="Other command-line options for postmaster"/>
+        </optional>
+        <optional>
+          <attribute name="shutdown_wait" rha:description="Wait X seconds for correct end of service shutdown"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="TOMCAT-5">
+    <element name="tomcat-5" rha:description="Defines a Tomcat server">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing tomcat-5 resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="config_file" rha:description="Config File"/>
+        </optional>
+        <optional>
+          <attribute name="tomcat_user" rha:description="User who runs the Tomcat server"/>
+        </optional>
+        <optional>
+          <attribute name="catalina_options" rha:description="Other command-line options for Catalina"/>
+        </optional>
+        <optional>
+          <attribute name="catalina_base" rha:description="Catalina base directory (differs for each service)"/>
+        </optional>
+        <optional>
+          <attribute name="shutdown_wait" rha:description="Wait X seconds for correct end of service shutdown"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="TOMCAT-6">
+    <element name="tomcat-6" rha:description="Defines a Tomcat server">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing tomcat-6 resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="config_file" rha:description="Config File"/>
+        </optional>
+        <optional>
+          <attribute name="shutdown_wait" rha:description="Wait X seconds for correct end of service shutdown"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="LVM">
+    <element name="lvm" rha:description="LVM Failover script">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing lvm resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <attribute name="vg_name" rha:description="Volume group name"/>
+        <optional>
+          <attribute name="lv_name" rha:description="Logical Volume name (optional)."/>
+        </optional>
+        <optional>
+          <attribute name="self_fence" rha:description="Fence the node if it is not able to clean up LVM tags"/>
+        </optional>
+        <optional>
+          <attribute name="nfslock" rha:description="Enable NFS lock workarounds"/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="VM">
+    <element name="vm" rha:description="Defines a Virtual Machine">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing vm resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="domain" rha:description="Cluster failover Domain"/>
+        </optional>
+        <optional>
+          <attribute name="autostart" rha:description="Automatic start after quorum formation"/>
+        </optional>
+        <optional>
+          <attribute name="exclusive" rha:description="Exclusive resource group"/>
+        </optional>
+        <optional>
+          <attribute name="recovery" rha:description="Failure recovery policy"/>
+        </optional>
+        <optional>
+          <attribute name="migration_mapping" rha:description="memberhost:targethost,memberhost:targethost .."/>
+        </optional>
+        <optional>
+          <attribute name="use_virsh" rha:description="If set to 1, vm.sh will use the virsh command to manage virtual machines instead of xm. This is required when using non-Xen virtual machines (e.g. qemu / KVM)."/>
+        </optional>
+        <optional>
+          <attribute name="xmlfile" rha:description="Full path to libvirt XML file describing the domain."/>
+        </optional>
+        <optional>
+          <attribute name="migrate" rha:description="Migration type (live or pause, default = live)."/>
+        </optional>
+        <optional>
+          <attribute name="path" rha:description="Path to virtual machine configuration files."/>
+        </optional>
+        <optional>
+          <attribute name="snapshot" rha:description="Path to the snapshot directory where the virtual machine image will be stored."/>
+        </optional>
+        <optional>
+          <attribute name="depend" rha:description="Top-level service this depends on, in service:name format."/>
+        </optional>
+        <optional>
+          <attribute name="depend_mode" rha:description="Service dependency mode (soft or hard)."/>
+        </optional>
+        <optional>
+          <attribute name="max_restarts" rha:description="Maximum restarts for this service."/>
+        </optional>
+        <optional>
+          <attribute name="restart_expire_time" rha:description="Restart expiration time; amount of time before a restart is forgotten."/>
+        </optional>
+        <optional>
+          <attribute name="status_program" rha:description="Additional status check program"/>
+        </optional>
+        <optional>
+          <attribute name="hypervisor" rha:description="Hypervisor"/>
+        </optional>
+        <optional>
+          <attribute name="hypervisor_uri" rha:description="Hypervisor URI (normally automatic)."/>
+        </optional>
+        <optional>
+          <attribute name="migration_uri" rha:description="Migration URI (normally automatic)."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="SAPINSTANCE">
+    <element name="SAPInstance" rha:description="SAP instance resource agent">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing SAPInstance resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="InstanceName" rha:description="instance name: SID_INSTANCE_VIR-HOSTNAME"/>
+        <optional>
+          <attribute name="DIR_EXECUTABLE" rha:description="path of sapstartsrv and sapcontrol"/>
+        </optional>
+        <optional>
+          <attribute name="DIR_PROFILE" rha:description="path of start profile"/>
+        </optional>
+        <optional>
+          <attribute name="START_PROFILE" rha:description="start profile name"/>
+        </optional>
+        <optional>
+          <attribute name="START_WAITTIME" rha:description="Check the successful start after that time (do not wait for J2EE-Addin)"/>
+        </optional>
+        <optional>
+          <attribute name="AUTOMATIC_RECOVER" rha:description="Enable or disable automatic startup recovery"/>
+        </optional>
+        <optional>
+          <attribute name="PRE_START_USEREXIT" rha:description="path to a pre-start script"/>
+        </optional>
+        <optional>
+          <attribute name="POST_START_USEREXIT" rha:description="path to a post-start script"/>
+        </optional>
+        <optional>
+          <attribute name="PRE_STOP_USEREXIT" rha:description="path to a pre-start script"/>
+        </optional>
+        <optional>
+          <attribute name="POST_STOP_USEREXIT" rha:description="path to a post-start script"/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="SAPDATABASE">
+    <element name="SAPDatabase" rha:description="SAP database resource agent">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing SAPDatabase resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="SID" rha:description="SAP system ID"/>
+        <optional>
+          <attribute name="DIR_EXECUTABLE" rha:description="path of sapstartsrv and sapcontrol"/>
+        </optional>
+        <attribute name="DBTYPE" rha:description="database vendor"/>
+        <optional>
+          <attribute name="NETSERVICENAME" rha:description="listener name"/>
+        </optional>
+        <optional>
+          <attribute name="DBJ2EE_ONLY" rha:description="only JAVA stack installed"/>
+        </optional>
+        <optional>
+          <attribute name="JAVA_HOME" rha:description="Path to Java SDK"/>
+        </optional>
+        <optional>
+          <attribute name="STRICT_MONITORING" rha:description="Activates application level monitoring"/>
+        </optional>
+        <optional>
+          <attribute name="AUTOMATIC_RECOVER" rha:description="Enable or disable automatic startup recovery"/>
+        </optional>
+        <optional>
+          <attribute name="DIR_BOOTSTRAP" rha:description="path to j2ee bootstrap directory"/>
+        </optional>
+        <optional>
+          <attribute name="DIR_SECSTORE" rha:description="path to j2ee secure store directory"/>
+        </optional>
+        <optional>
+          <attribute name="DB_JARS" rha:description="file name of the jdbc driver"/>
+        </optional>
+        <optional>
+          <attribute name="PRE_START_USEREXIT" rha:description="path to a pre-start script"/>
+        </optional>
+        <optional>
+          <attribute name="POST_START_USEREXIT" rha:description="path to a post-start script"/>
+        </optional>
+        <optional>
+          <attribute name="PRE_STOP_USEREXIT" rha:description="path to a pre-start script"/>
+        </optional>
+        <optional>
+          <attribute name="POST_STOP_USEREXIT" rha:description="path to a post-start script"/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="NAMED">
+    <element name="named" rha:description="Defines an instance of named server">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing named resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="config_file" rha:description="Config File"/>
+        </optional>
+        <optional>
+          <attribute name="named_sdb" rha:description="Simplified Database Backend"/>
+        </optional>
+        <optional>
+          <attribute name="named_working_dir" rha:description="Other command-line options for named"/>
+        </optional>
+        <optional>
+          <attribute name="named_options" rha:description="Other command-line options for named"/>
+        </optional>
+        <optional>
+          <attribute name="shutdown_wait" rha:description="Wait X seconds for correct end of service shutdown"/>
+        </optional>
+        <optional>
+          <attribute name="service_name" rha:description="Inherit the service name."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="ASEHAAGENT">
+    <element name="ASEHAagent" rha:description="Sybase ASE Failover Instance">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing ASEHAagent resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="name"/>
+        <attribute name="sybase_home" rha:description="SYBASE home directory"/>
+        <attribute name="sybase_ase" rha:description="SYBASE_ASE directory name"/>
+        <attribute name="sybase_ocs" rha:description="SYBASE_OCS directory name"/>
+        <attribute name="server_name" rha:description="ASE server name"/>
+        <attribute name="login_file" rha:description="Login file"/>
+        <attribute name="interfaces_file" rha:description="Interfaces file"/>
+        <attribute name="sybase_user" rha:description="Sybase user"/>
+        <attribute name="shutdown_timeout" rha:description="Shutdown timeout value"/>
+        <attribute name="start_timeout" rha:description="Start timeout value"/>
+        <attribute name="deep_probe_timeout" rha:description="Deep probe timeout value"/>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="DRBD">
+    <element name="drbd" rha:description="This is a DRBD resource.">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing drbd resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Cluster resource name"/>
+        <attribute name="resource" rha:description="DRBD resource name"/>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="NFSSERVER">
+    <element name="nfsserver" rha:description="This defines an NFS server resource.">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing nfsserver resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Name"/>
+        <optional>
+          <attribute name="path" rha:description="This is the path you intend to export."/>
+        </optional>
+        <optional>
+          <attribute name="nfspath" rha:description="This is the path containing shared NFS recovery information, relative to the path parameter."/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="FS">
+    <element name="fs" rha:description="Defines a file system mount.">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing fs resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="File System Name"/>
+        <attribute name="mountpoint" rha:description="Mount Point"/>
+        <attribute name="device" rha:description="Device or Label"/>
+        <optional>
+          <attribute name="fstype" rha:description="File system type"/>
+        </optional>
+        <optional>
+          <attribute name="force_unmount" rha:description="Force Unmount"/>
+        </optional>
+        <optional>
+          <attribute name="quick_status" rha:description="Quick/brief status checks."/>
+        </optional>
+        <optional>
+          <attribute name="self_fence" rha:description="Seppuku Unmount"/>
+        </optional>
+        <optional>
+          <attribute name="nfslock" rha:description="Enable NFS lock workarounds"/>
+        </optional>
+        <optional>
+          <attribute name="fsid" rha:description="NFS File system ID"/>
+        </optional>
+        <optional>
+          <attribute name="force_fsck" rha:description="Force fsck support"/>
+        </optional>
+        <optional>
+          <attribute name="options" rha:description="Mount Options"/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+
+  <define name="ORACLEDB">
+    <element name="oracledb" rha:description="Oracle 10g Failover Instance">
+      <choice>
+      <group>
+        <!-- rgmanager specific stuff -->
+        <attribute name="ref" rha:description="Reference to existing oracledb resource in the resources section."/>
+      </group>
+      <group>
+        <attribute name="name" rha:description="Oracle SID"/>
+        <optional>
+          <attribute name="listener_name" rha:description="Oracle Listener Instance Name"/>
+        </optional>
+        <attribute name="user" rha:description="Oracle User Name"/>
+        <attribute name="home" rha:description="Oracle Home Directory"/>
+        <optional>
+          <attribute name="type" rha:description="Oracle Installation Type"/>
+        </optional>
+        <optional>
+          <attribute name="vhost" rha:description="Virtual Hostname"/>
+        </optional>
+      </group>
+      </choice>
+      <optional>
+        <attribute name="__independent_subtree" rha:description="Treat this and all children as an independent subtree."/>
+      </optional>
+      <optional>
+        <attribute name="__enforce_timeouts" rha:description="Consider a timeout for operations as fatal."/>
+      </optional>
+      <optional>
+        <attribute name="__max_failures" rha:description="Maximum number of failures before returning a failure to a status check."/>
+      </optional>
+      <optional>
+        <attribute name="__failure_expire_time" rha:description="Amount of time before a failure is forgotten."/>
+      </optional>
+      <optional>
+        <ref name="CHILDREN"/>
+      </optional>
+    </element>
+  </define>
+
+  <define name="CHILDREN">
+    <zeroOrMore>
+     <choice>
+
+        <ref name="SERVICE"/>
+        <ref name="IP"/>
+        <ref name="NFSCLIENT"/>
+        <ref name="NFSEXPORT"/>
+        <ref name="SCRIPT"/>
+        <ref name="NETFS"/>
+        <ref name="CLUSTERFS"/>
+        <ref name="SMB"/>
+        <ref name="APACHE"/>
+        <ref name="OPENLDAP"/>
+        <ref name="SAMBA"/>
+        <ref name="MYSQL"/>
+        <ref name="POSTGRES-8"/>
+        <ref name="TOMCAT-5"/>
+        <ref name="TOMCAT-6"/>
+        <ref name="LVM"/>
+        <ref name="VM"/>
+        <ref name="SAPINSTANCE"/>
+        <ref name="SAPDATABASE"/>
+        <ref name="NAMED"/>
+        <ref name="ASEHAAGENT"/>
+        <ref name="DRBD"/>
+        <ref name="NFSSERVER"/>
+        <ref name="FS"/>
+        <ref name="ORACLEDB"/>
+      <ref name="RESOURCEACTION"/>
+     </choice>
+    </zeroOrMore>
+  </define>
+
+  <define name="RESOURCEACTION">
+   <zeroOrMore>
+    <element name="action" rha:description="Overrides resource action timings for a resource instance.">
+     <attribute name="name" rha:description="Name of resource action (start, stop, status, etc.)."/>
+     <optional>
+      <attribute name="depth" rha:description="Status check depth (resource agent dependent; * = all depths)."/>
+     </optional>
+     <optional>
+      <attribute name="interval" rha:description="Status check interval."/>
+     </optional>
+     <optional>
+      <attribute name="timeout" rha:description="Action timeout.  Meaningless unless __enforce_timeouts is set for this resource."/>
+     </optional>
+    </element>
+   </zeroOrMore>
+  </define>
+
+<!-- End autogenerated resources definitions -->
+<!--End of resource definitions-->
+
+<!-- begin node fence definitions -->
+
+ <define name="FENCE">
+  <element name="fence" rha:description="Contains methods for fencing
+      the node in different ways. fenced(8)">
+
+   <zeroOrMore>
+
+    <element name="method" rha:description="Contains one or more devices
+        for fencing the node a single way. fenced(8)">
+
+     <attribute name="name" rha:description="A name used to distinguish
+         multiple methods from each other. fenced(8)"/>
+
+     <zeroOrMore>
+       <ref name="DEVICE"/>
+     </zeroOrMore>
+
+    </element>
+
+   </zeroOrMore>
+  </element>
+ </define>
+
+ <define name="UNFENCE">
+  <element name="unfence" rha:description="Contains devices for unfencing
+      the node. fence_node(8)">
+   <zeroOrMore>
+    <ref name="DEVICE"/>
+   </zeroOrMore>
+  </element>
+ </define>
+
+ <define name="DEVICE">
+  <element name="device" rha:description="Defines the properties of a
+      device used for fencing or unfencing a node. fenced(8)">
+
+   <attribute name="name" rha:description="The name of a fencedevice
+       defined in the fencedevices section. fenced(8)">
+    <data type="IDREF"/>
+   </attribute>
+
+   <ref name="FENCEDEVICEOPTIONS"/>
+
+  </element>
+ </define>
+<!-- end node fence definitions -->
+
+
+<!-- begin fence attribute group definitions -->
+ <define name="FENCEDEVICEOPTIONS">
+     <optional>
+      <choice>
+       <!-- begin specific fence devices -->
+
+       <!-- begin non-generated device definitions -->
+       <!-- RPS10 -->
+       <group rha:description="RPS10 Serial Switch" >
+        <attribute name="device" rha:description="The device the switch
+            is connected to on the controlling host."
+            rha:sample="/dev/ttys2"/>
+        <attribute name="port" rha:description="The switch outlet
+            number." rha:sample="2"/>
+       </group>
+       <!--FIXME: Determine if the following group should exclude
+       the auth and lanplus attributes. Those attributes apply only to
+       the impilan fence device.-->
+       <!-- Brocade, McData, SANBox2, Bladecenter,bullpap, ipmilan -->
+       <group>
+        <attribute name="ipaddr" rha:description="IP address or the name
+            of the device." rha:sample="rack007"/>
+        <optional>
+        <attribute name="login" rha:description="The login name used to
+            access the device. " rha:sample="admin"/>
+        </optional>
+        <optional>
+        <attribute name="passwd" rha:description="The password used to
+            authenticate the connection to the
+            device." rha:sample="pa$$word"/>
+        </optional>
+        <optional>
+        <attribute name="passwd_script" rha:description="The script that
+            supplies a password for access to the fence device. Using
+            this supersedes the Password parameter." rha:sample=""/>
+        </optional>
+        <optional>
+         <attribute name="auth" rha:description="For IPMI LAN
+             only. Authentication Type: none, password,
+             md2, or md5" rha:sample=""/>
+        </optional>
+        <optional>
+         <attribute name="lanplus" rha:description="For IPMI LAN only.
+             Set value to either True or 1; leave out for false."
+             rha:sample="True"/>
+        </optional>
+       </group>
+       <!-- Vixel -->
+       <group>
+        <optional>
+         <attribute name="ipaddr" rha:description="IP address or the
+             name of the device." rha:sample="10.1.0.1"/>
+        </optional>
+        <optional>
+        <attribute name="passwd" rha:description="The password used to
+            authenticate the connection to the
+            device." rha:sample="pa$$word"/>
+        </optional>
+        <optional>
+         <attribute name="passwd_script" rha:description="The script
+             that supplies a password for access to the
+             fence device. Using this supersedes the Password
+             parameter." rha:sample=""/>
+        </optional>
+       </group>
+       <!-- scsi reservations -->
+       <group>
+        <optional>
+         <attribute name="nodename" rha:description="Name of the node to
+            be fenced. Refer to fence_scsi(8) for more
+            information." rha:sample=""/>
+        </optional>
+        <optional>
+         <attribute name="key" rha:description="" rha:sample="33">
+          <data type="positiveInteger"/>
+         </attribute>
+        </optional>
+        <optional>
+         <attribute name="devices" rha:description="List of devices
+	    to fence (separated by commas)." rha:sample="/dev/sdb,/dev/sdc"/>
+        </optional>
+        <optional>
+         <attribute name="action" rha:description="Fencing action to
+	    take (off or on)." rha:sample="off"/>
+        </optional>
+        <optional>
+         <attribute name="logfile" rha:description="Location to output
+	    logs from fence_scsi." rha:sample="/var/log/fence_scsi.log"/>
+        </optional>
+        <optional>
+         <attribute name="aptpl" rha:description="" rha:sample=""/>
+        </optional>
+       </group>
+       <!-- GNBD -->
+       <group>
+        <attribute name="servers" rha:description="The hostname of each
+            GNBD to disable. For multiple hostnames, separate each
+            hostname with a space." rha:sample=""/>
+       </group>
+       <!-- Egenera -->
+       <!-- FIXME: Note that in the schema web page each is listed as a
+       parameter. Likewise for Conga. In addition, Conga shows Ipan
+       and pserver parameters. Also, in Conga, the esh parameter is
+       an optional ESH path. Presumably those should be attributes in
+       the schema. We need more invormation on this. -->
+       <group>
+        <optional>
+         <attribute name="cserver" rha:description="The hostname (and
+            optionally the username in the form of username@hostname)
+            assigned to the device. Refer to the fence_egenera(8) man
+            page for more information." rha:sample=""/>
+        </optional>
+        <optional>
+         <attribute name="pserver" rha:description="The pserver to operate on.  fence_egenera(8)" />
+        </optional>
+        <optional>
+         <attribute name="lpan" rha:description="The lpan to operate on.  fence_egenera(8)" />
+        </optional>
+        <optional>
+         <attribute name="action" rha:description="The action to perform (reboot, off, on, or status).  fence_egenera(8)" />
+        </optional>
+        <optional>
+         <attribute name="esh" rha:description="Path to the esh command on the cserver.  fence_egenera(8)" />
+        </optional>
+        <optional>
+         <attribute name="user" rha:description="See fence_egenera(8)" />
+        </optional>
+        <optional>
+         <attribute name="delay" rha:description="Wait this many seconds before fencing is started.  fence_egenera(8)" />
+        </optional>
+       </group>
+       <!-- FIXME: It appears that xCat is no longer supported. Found no
+       fence agents for x Cat in RHEL 5.3. -->
+       <!-- xCAT -->
+       <group>
+        <attribute name="rpowerpath" rha:description="" rha:sample=""/>
+       </group>
+       <!-- fence_xvm ( provided by fence-virt package ) -->
+       <group>
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Specify (stdin) or increment (command line) debug level" />
+        </optional>
+        <optional>
+          <attribute name="ip_family" rha:description="IP Family ([auto], ipv4, ipv6)" />
+        </optional>
+        <optional>
+          <attribute name="multicast_address" rha:description="Multicast address (default=225.0.0.12 / ff05::3:1)" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="Multicast or VMChannel IP port (default=1229)" />
+        </optional>
+        <optional>
+          <attribute name="retrans" rha:description="Multicast retransmit time (in 1/10sec; default=20)" />
+        </optional>
+        <optional>
+          <attribute name="auth" rha:description="Authentication (none, sha1, [sha256], sha512)" />
+        </optional>
+        <optional>
+          <attribute name="hash" rha:description="Packet hash strength (none, sha1, [sha256], sha512)" />
+        </optional>
+        <optional>
+          <attribute name="key_file" rha:description="Shared key file (default=/etc/cluster/fence_xvm.key)" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Virtual Machine (domain name) to fence" />
+        </optional>
+        <optional>
+          <attribute name="domain" rha:description="Virtual Machine (domain name) to fence (deprecated)" />
+        </optional>
+        <optional>
+          <attribute name="use_uuid" rha:description="Treat [domain] as UUID instead of domain name. This is provided for compatibility with older fence_xvmd installations." />
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing action (null, off, on, [reboot], status, list, monitor, metadata)" />
+        </optional>
+        <optional>
+          <attribute name="timeout" rha:description="Fencing timeout (in seconds; default=30)" />
+        </optional>
+       </group>
+
+       <!-- fence_virt -->
+       <group>
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Specify (stdin) or increment (command line) debug level" />
+        </optional>
+        <optional>
+          <attribute name="serial_device" rha:description="Serial device (default=/dev/ttyS1)" />
+        </optional>
+        <optional>
+          <attribute name="serial_params" rha:description="Serial Parameters (default=115200,8N1)" />
+        </optional>
+        <optional>
+          <attribute name="channel_address" rha:description="VM Channel IP address (default=10.0.2.179)" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="Multicast or VMChannel IP port (default=1229)" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Virtual Machine (domain name) to fence" />
+        </optional>
+        <optional>
+          <attribute name="domain" rha:description="Virtual Machine (domain name) to fence (deprecated)" />
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing action (null, off, on, [reboot], status, list, monitor, metadata)" />
+        </optional>
+        <optional>
+          <attribute name="timeout" rha:description="Fencing timeout (in seconds; default=30)" />
+        </optional>
+       </group>
+
+       <!-- end non-generated device definitions -->
+
+       <!-- begin auto-generated device definitions -->
+      <group rha:fence_agent="fence_vmware">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="exec" rha:description="Command to execute" />
+        </optional>
+        <optional>
+          <attribute name="vmware_type" rha:description="Type of VMware to connect" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="vmware_datacenter" rha:description="Show only machines in specified datacenter" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_lpar">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="partition" rha:description="Partition name" />
+        </optional>
+        <optional>
+          <attribute name="managed" rha:description="Managed system name" />
+        </optional>
+        <optional>
+          <attribute name="hmc_version" rha:description="Force HMC version to use (3 or 4)" />
+        </optional>
+        <optional>
+          <attribute name="cmd_prompt" rha:description="Force command prompt" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_bladecenter">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="cmd_prompt" rha:description="Force command prompt" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="missing_as_off" rha:description="Missing port returns OFF instead of failure" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_intelmodular">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="snmp_version" rha:description="Specifies SNMP version to use (1,2c,3)" />
+        </optional>
+        <optional>
+          <attribute name="community" rha:description="Set the community string" />
+        </optional>
+        <optional>
+          <attribute name="snmp_auth_prot" rha:description="Set authentication protocol (MD5|SHA)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_sec_level" rha:description="Set security level (noAuthNoPriv|authNoPriv|authPriv)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_prot" rha:description="Set privacy protocol (DES|AES)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd" rha:description="Set privacy protocol password" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd_script" rha:description="Script to run to retrieve privacy password" />
+        </optional>
+        <optional>
+          <attribute name="udpport" rha:description="UDP/TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_ifmib">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="snmp_version" rha:description="Specifies SNMP version to use (1,2c,3)" />
+        </optional>
+        <optional>
+          <attribute name="community" rha:description="Set the community string" />
+        </optional>
+        <optional>
+          <attribute name="snmp_auth_prot" rha:description="Set authentication protocol (MD5|SHA)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_sec_level" rha:description="Set security level (noAuthNoPriv|authNoPriv|authPriv)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_prot" rha:description="Set privacy protocol (DES|AES)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd" rha:description="Set privacy protocol password" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd_script" rha:description="Script to run to retrieve privacy password" />
+        </optional>
+        <optional>
+          <attribute name="udpport" rha:description="UDP/TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_eps">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_ldom">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="cmd_prompt" rha:description="Force command prompt" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+      <!-- No metadata for fence_xcat -->
+      <!-- No metadata for fence_rackswitch -->
+      <!-- No metadata for fence_rsb -->
+
+      <group rha:fence_agent="fence_bladecenter_snmp">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="snmp_version" rha:description="Specifies SNMP version to use (1,2c,3)" />
+        </optional>
+        <optional>
+          <attribute name="community" rha:description="Set the community string" />
+        </optional>
+        <optional>
+          <attribute name="snmp_auth_prot" rha:description="Set authentication protocol (MD5|SHA)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_sec_level" rha:description="Set security level (noAuthNoPriv|authNoPriv|authPriv)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_prot" rha:description="Set privacy protocol (DES|AES)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd" rha:description="Set privacy protocol password" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd_script" rha:description="Script to run to retrieve privacy password" />
+        </optional>
+        <optional>
+          <attribute name="udpport" rha:description="UDP/TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+      <!-- No metadata for fence_cpint -->
+      <!-- No metadata for fence_drac -->
+      <!-- No metadata for fence_ipmilan -->
+
+      <group rha:fence_agent="fence_rsa">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="cmd_prompt" rha:description="Force command prompt" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_virsh">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+      <!-- No metadata for fence_mcdata -->
+      <!-- No metadata for fence_bullpap -->
+
+      <group rha:fence_agent="fence_wti">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="cmd_prompt" rha:description="Force command prompt" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+      <!-- No metadata for fence_zvm -->
+
+      <group rha:fence_agent="fence_drac5">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="cmd_prompt" rha:description="Force command prompt" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="drac_version" rha:description="Force DRAC version to use" />
+        </optional>
+        <optional>
+          <attribute name="module_name" rha:description="DRAC/MC module name" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+      <!-- No metadata for fence_vixel -->
+      <!-- No metadata for fence_baytech -->
+
+      <group rha:fence_agent="fence_scsi">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="aptpl" rha:description="Use APTPL flag for registrations" />
+        </optional>
+        <optional>
+          <attribute name="devices" rha:description="List of devices to be used for fencing action" />
+        </optional>
+        <optional>
+          <attribute name="logfile" rha:description="File to write error/debug messages" />
+        </optional>
+        <optional>
+          <attribute name="key" rha:description="Key value to be used for fencing action" />
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing action" />
+        </optional>
+        <optional>
+          <attribute name="nodename" rha:description="Name of node" />
+        </optional>
+      </group>
+
+      <!-- No metadata for fence_brocade -->
+
+      <group rha:fence_agent="fence_ilo_mp">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="cmd_prompt" rha:description="Force command prompt" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_apc">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="switch" rha:description="Physical switch number on device" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_alom">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="secure" rha:description="SSH connection" />
+        </optional>
+        <optional>
+          <attribute name="identity_file" rha:description="Identity file for ssh" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+      <!-- No metadata for fence_ibmblade -->
+
+      <group rha:fence_agent="fence_sanbox2">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="io_fencing" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="cmd_prompt" rha:description="Force command prompt" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+      <!-- No metadata for fence_egenera -->
+
+      <group rha:fence_agent="fence_apc_snmp">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="snmp_version" rha:description="Specifies SNMP version to use (1,2c,3)" />
+        </optional>
+        <optional>
+          <attribute name="community" rha:description="Set the community string" />
+        </optional>
+        <optional>
+          <attribute name="snmp_auth_prot" rha:description="Set authentication protocol (MD5|SHA)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_sec_level" rha:description="Set security level (noAuthNoPriv|authNoPriv|authPriv)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_prot" rha:description="Set privacy protocol (DES|AES)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd" rha:description="Set privacy protocol password" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd_script" rha:description="Script to run to retrieve privacy password" />
+        </optional>
+        <optional>
+          <attribute name="udpport" rha:description="UDP/TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_ilo">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="ssl" rha:description="SSL connection" />
+        </optional>
+        <optional>
+          <attribute name="ribcl" rha:description="Force ribcl version to use" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="ipport" rha:description="TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+
+      <group rha:fence_agent="fence_cisco_mds">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="ipaddr" rha:description="IP Address or Hostname" />
+        </optional>
+        <optional>
+          <attribute name="login" rha:description="Login Name" />
+        </optional>
+        <optional>
+          <attribute name="passwd" rha:description="Login password or passphrase" />
+        </optional>
+        <optional>
+          <attribute name="passwd_script" rha:description="Script to retrieve password" />
+        </optional>
+        <optional>
+          <attribute name="port" rha:description="Physical plug number or name of virtual machine" />
+        </optional>
+        <optional>
+          <attribute name="snmp_version" rha:description="Specifies SNMP version to use (1,2c,3)" />
+        </optional>
+        <optional>
+          <attribute name="community" rha:description="Set the community string" />
+        </optional>
+        <optional>
+          <attribute name="snmp_auth_prot" rha:description="Set authentication protocol (MD5|SHA)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_sec_level" rha:description="Set security level (noAuthNoPriv|authNoPriv|authPriv)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_prot" rha:description="Set privacy protocol (DES|AES)" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd" rha:description="Set privacy protocol password" />
+        </optional>
+        <optional>
+          <attribute name="snmp_priv_passwd_script" rha:description="Script to run to retrieve privacy password" />
+        </optional>
+        <optional>
+          <attribute name="udpport" rha:description="UDP/TCP port to use for connection with device" />
+        </optional>
+        <optional>
+          <attribute name="inet4_only" rha:description="Forces agent to use IPv4 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="inet6_only" rha:description="Forces agent to use IPv6 addresses only" />
+        </optional>
+        <optional>
+          <attribute name="verbose" rha:description="Verbose mode" />
+        </optional>
+        <optional>
+          <attribute name="debug" rha:description="Write debug information to given file" />
+        </optional>
+        <optional>
+          <attribute name="version" rha:description="Display version information and exit" />
+        </optional>
+        <optional>
+          <attribute name="help" rha:description="Display help and exit" />
+        </optional>
+        <optional>
+          <attribute name="separator" rha:description="Separator for CSV created by operation list" />
+        </optional>
+        <optional>
+          <attribute name="power_timeout" rha:description="Test X seconds for status change after ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="shell_timeout" rha:description="Wait X seconds for cmd promprt after issuing command" />
+        </optional>
+        <optional>
+          <attribute name="login_timeout" rha:description="Wait X seconds for cmd prompt after login" />
+        </optional>
+        <optional>
+          <attribute name="power_wait" rha:description="Wait X seconds after issuing ON/OFF" />
+        </optional>
+        <optional>
+          <attribute name="retry_on" rha:description="Count of attempts to retry power on" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+      </group>
+
+       <!-- end auto-generated device definitions -->
+
+       <group>
+        <optional>
+         <empty/>
+        </optional>
+       </group>
+
+       <!-- end specific fence devices -->
+      </choice>
+     </optional>
+  </define>
+<!-- end fence attribute group definitions -->
+
+</grammar>

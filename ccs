@@ -8,6 +8,7 @@ import os
 import os.path
 
 RICCI_PORT = 11111
+CLUSTERRNG = "cluster.rng.in"
 
 password = None
 debug = False
@@ -22,6 +23,7 @@ def main(argv):
     createmethod = removemethod = createcluster = False
     addfencedev = removefencedev = False
     addfenceinst = removefenceinst = False
+    lsfencedev = lsfenceinst = False
     passwordset = False
     global password
     global debug
@@ -30,7 +32,7 @@ def main(argv):
         opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","lsnodes",
       "listservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "createmethod=", "removemethod=", "addfencedev=", "removefencedev=",
-      "addfenceinst=", "removefenceinst="])
+      "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -77,6 +79,8 @@ def main(argv):
             removefenceinst = True;
             name = arg
             options = args
+        elif opt in ("--lsfencedev"): lsfencedev = True;
+        elif opt in ("--lsfenceinst"): lsfenceinst = True; instance = arg
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf(hostname)
@@ -99,7 +103,9 @@ def main(argv):
     if (removefencedev): remove_fencedev(hostname, name)
     if (addfenceinst): add_fenceinst(hostname, name, options)
     if (removefenceinst): remove_fenceinst(hostname, name, options)
-        
+    if (lsfencedev): ls_fencedev()
+    if (lsfenceinst): ls_fenceinst(arg)
+
 def usage():
     print """Usage: ccs [OPTION]...
 Remotely control cluster infrastructure.
@@ -135,9 +141,11 @@ Remotely control cluster infrastructure.
                         Add fence instance
       --removefenceinst <fence device name> <node> <method>
                         Remove all instances of the fence device listed from
-			the given method and node
-      --lsfencedev	Lists available fence devices and their options
-      --lsfenceinst	Lists available fence instances and their options
+                        the given method and node
+      --lsfencedev      Lists available fence devices and their options
+      --lsfenceinst <fence device>
+                        Lists available fence instances options for given
+                        fence device
   """
 
 def fence_node(hostname, node):
@@ -251,7 +259,6 @@ def empty_cluster_conf(name="cluster"):
     newdoc = impl.createDocument(None, "cluster", None)
 
     top = newdoc.documentElement
-    top.setAttribute('alias',name)
     top.setAttribute('config_version','1')
     top.setAttribute('name',name)
     fence_daemon = newdoc.createElement("fence_daemon")
@@ -301,13 +308,21 @@ def create_method(hostname, method, options):
     if node_found == False:
         print "Node '%s' does not currently exist in cluster.conf." % (nodename)
         sys.exit(1)
+
     if method_found == True:
         print "Method '%s' already exists in cluster.conf." % (method)
         sys.exit(1)
 
+    fencenodes = node.getElementsByTagName("fence")
+    if len(fencenodes) == 0:
+        fencenode = dom.createElement("fence")
+    else:
+        fencenode = fencenodes[0]
+
     methodnode = dom.createElement("method")
     methodnode.setAttribute("name", method)
-    node.appendChild(methodnode)
+    fencenode.appendChild(methodnode)
+    node.appendChild(fencenode)
     set_cluster_conf(hostname, dom.toxml())
     print "Method %s added to %s." % (method, nodename)
 
@@ -337,7 +352,7 @@ def remove_method(hostname, method, options):
         print "Method %s is not present for %s." % (method, nodename)
         sys.exit(1)
 
-    node.removeChild(methodnode)
+    methodnode.parentNode.removeChild(methodnode)
     set_cluster_conf(hostname, dom.toxml())
     print "Method %s removed from %s." % (method, nodename)
 
@@ -460,6 +475,26 @@ def remove_fenceinst(hostname, name, options):
         sys.exit(1)
 
     set_cluster_conf(hostname, dom.toxml())
+
+
+def ls_fencedev():
+    rng = open(CLUSTERRNG)
+    dom = minidom.parseString(rng.read())
+    for elem in dom.getElementsByTagName("group"):
+        if elem.getAttribute("rha:fence_agent"):
+            print elem.getAttribute("rha:fence_agent")
+
+def ls_fenceinst(fencedev):
+    rng = open(CLUSTERRNG)
+    dom = minidom.parseString(rng.read())
+    for elem in dom.getElementsByTagName("group"):
+        if elem.getAttribute("rha:fence_agent") == fencedev:
+            for attr in elem.getElementsByTagName("attribute"):
+                attrname = attr.getAttribute("name")
+                invisible_attrs = ["verbose", "debug", "version", "help",
+                        "option", "action", "separator"]
+                if attrname not in invisible_attrs:
+                    print attr.getAttribute("name") + " - " + attr.getAttribute("rha:description")
 
 def set_cluster_conf(hostname,xml):
     xml = xml.replace('<?xml version="1.0" ?>','')
