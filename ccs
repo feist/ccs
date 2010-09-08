@@ -30,7 +30,7 @@ def main(argv):
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
         opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","lsnodes",
-      "listservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
+      "lsservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst="])
     except getopt.GetoptError:
@@ -48,7 +48,7 @@ def main(argv):
         elif opt in ("--start"): start = True
         elif opt in ("--stop"): stop = True
         elif opt in ("--lsnodes"): listnodes = True
-        elif opt in ("--listservices"): listservices = True
+        elif opt in ("--lsservices"): listservices = True
         elif opt in ("--listdomains"): listdomains = True
         elif opt in ("--addnode"): addnode = True ; node = arg 
         elif opt in ("--removenode"): removenode = True ; node = arg 
@@ -115,20 +115,11 @@ Remotely control cluster infrastructure.
   -p, --password        Root password for node running ricci
       --getconf         Print current cluster.conf file
       --status          Print current cluster status
-      --fence <node>    Fence the node <node>
-      --start           Start cluster services on host
-      --stop            Stop cluster services on host
-      --lsnodes         List all nodes in the cluster
-      --listservices    List all services in the cluster
+      --createcluster <cluster>
+                        Create a new cluster.conf
       --addnode <node>  Add node <node> to the cluster
       --removenode <node>
                         Remove a node from the cluster
-      --getversion      Get the current cluster.conf version
-      --setversion      Set the cluster.conf version
-      --incversion      Increment the cluster.conf version by 1
-                        scp and put them in the current directory
-      --createcluster <cluster>
-                        Create a new cluster.conf
       --addmethod <method> <node>
                         Add a method to a specific node
       --removemethod <method> <node>
@@ -146,6 +137,15 @@ Remotely control cluster infrastructure.
       --lsfenceinst <fence device>
                         Lists available fence instances options for given
                         fence device
+      --lsnodes         List all nodes in the cluster
+      --lsservices    List all services in the cluster
+      --start           Start cluster services on host
+      --stop            Stop cluster services on host
+      --fence <node>    Fence the node <node>
+      --getversion      Get the current cluster.conf version
+      --setversion      Set the cluster.conf version
+      --incversion      Increment the cluster.conf version by 1
+                        scp and put them in the current directory
   """
 
 def fence_node(hostname, node):
