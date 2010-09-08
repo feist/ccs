@@ -20,7 +20,7 @@ def main(argv):
     listnodes = listservices = listdomains = False
     addnode = removenode = getversion = False
     incrementversion = setversion = False
-    createmethod = removemethod = createcluster = False
+    addmethod = removemethod = createcluster = False
     addfencedev = removefencedev = False
     addfenceinst = removefenceinst = False
     lsfencedev = lsfenceinst = False
@@ -31,7 +31,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","lsnodes",
       "listservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
-      "createcluster=", "password=", "createmethod=", "removemethod=", "addfencedev=", "removefencedev=",
+      "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst="])
     except getopt.GetoptError:
         usage()
@@ -58,8 +58,8 @@ def main(argv):
         elif opt in ("--createcluster"):
             createcluster = True
             clustername = arg
-        elif opt in ("--createmethod"):
-            createmethod = True
+        elif opt in ("--addmethod"):
+            addmethod = True
             method = arg
             options = args
         elif opt in ("--removemethod"):
@@ -97,7 +97,7 @@ def main(argv):
     if (setversion): set_version(hostname, version)
     if (incrementversion): increment_version(hostname)
     if (createcluster): create_cluster(hostname, clustername)
-    if (createmethod): create_method(hostname, method, options)
+    if (addmethod): add_method(hostname, method, options)
     if (removemethod): remove_method(hostname, method, options)
     if (addfencedev): add_fencedev(hostname, name, options)
     if (removefencedev): remove_fencedev(hostname, name)
@@ -129,7 +129,7 @@ Remotely control cluster infrastructure.
                         scp and put them in the current directory
       --createcluster <cluster>
                         Create a new cluster.conf
-      --createmethod <method> <node>
+      --addmethod <method> <node>
                         Add a method to a specific node
       --removemethod <method> <node>
                         Remove a method from a specific node
@@ -285,7 +285,7 @@ def create_cluster(hostname, clustername):
     xml = empty_cluster_conf(clustername)
     set_cluster_conf(hostname,xml)
 
-def create_method(hostname, method, options):
+def add_method(hostname, method, options):
     method_found = False
     node_found = False
 
@@ -496,9 +496,15 @@ def ls_fenceinst(fencedev):
                 if attrname not in invisible_attrs:
                     print attr.getAttribute("name") + " - " + attr.getAttribute("rha:description")
 
+# Set the cluster.conf file and increment the version
 def set_cluster_conf(hostname,xml):
+    dom = minidom.parseString(xml)
+    version = dom.getElementsByTagName("cluster")[0].getAttribute("config_version")
+    
+    version = int(version) + 1
+    dom.getElementsByTagName("cluster")[0].setAttribute("config_version",str(version))
+    xml = dom.toxml()
     xml = xml.replace('<?xml version="1.0" ?>','')
-    log_msg ("Empty cluster file created:")
     log_msg (xml)
     log_msg (send_ricci_command(hostname, "cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
 
