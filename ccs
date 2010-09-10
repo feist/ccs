@@ -12,6 +12,7 @@ CLUSTERRNG = "cluster.rng.in"
 
 password = None
 debug = False
+propagate = False
 
 def main(argv):
     hostname = "localhost"
@@ -27,12 +28,13 @@ def main(argv):
     passwordset = False
     global password
     global debug
+    global propagate
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
         opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","lsnodes",
       "lsservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
-      "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst="])
+      "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -55,6 +57,7 @@ def main(argv):
         elif opt in ("--getversion"): getversion = True
         elif opt in ("--setversion"): setversion = True ; version = arg 
         elif opt in ("--incversion"): incrementversion = True
+        elif opt in ("--propagate"): propagate = True
         elif opt in ("--createcluster"):
             createcluster = True
             clustername = arg
@@ -237,7 +240,7 @@ def get_version(hostname):
 def set_version(hostname, version):
     dom = minidom.parseString(get_cluster_conf_xml(hostname))
     dom.getElementsByTagName('cluster')[0].setAttribute("config_version",version)
-    set_cluster_conf(hostname,dom.toxml())
+    set_cluster_conf(hostname,dom.toxml(), False)
 
 def increment_version(hostname):
     new_version = int(get_version(hostname)) + 1
@@ -497,16 +500,24 @@ def ls_fenceinst(fencedev):
                     print attr.getAttribute("name") + " - " + attr.getAttribute("rha:description")
 
 # Set the cluster.conf file and increment the version
-def set_cluster_conf(hostname,xml):
+# If global variable propagate is true, propagate to entire cluster
+def set_cluster_conf(hostname, xml, increment = True):
     dom = minidom.parseString(xml)
-    version = dom.getElementsByTagName("cluster")[0].getAttribute("config_version")
-    
-    version = int(version) + 1
-    dom.getElementsByTagName("cluster")[0].setAttribute("config_version",str(version))
-    xml = dom.toxml()
+
+    if increment:
+      version = dom.getElementsByTagName("cluster")[0].getAttribute("config_version")
+      version = int(version) + 1
+      dom.getElementsByTagName("cluster")[0].setAttribute("config_version",str(version))
+      xml = dom.toxml()
+
     xml = xml.replace('<?xml version="1.0" ?>','')
     log_msg (xml)
-    log_msg (send_ricci_command(hostname, "cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
+
+    if propagate:
+      log_msg (send_ricci_command(hostname, "cluster", "set_cluster.conf", ("cluster.conf","xml","",xml), ("propagate", "boolean", "true")))
+    else:
+      log_msg (send_ricci_command(hostname, "cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
+
 
 def send_ricci_command(hostname, module, command, *vars):
     global password
