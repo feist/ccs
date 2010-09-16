@@ -25,6 +25,7 @@ def main(argv):
     addfencedev = removefencedev = False
     addfenceinst = removefenceinst = False
     lsfencedev = lsfenceinst = False
+    addfailoverdomain = removefailoverdomain = False
     passwordset = False
     global password
     global debug
@@ -34,7 +35,8 @@ def main(argv):
         opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","lsnodes",
       "lsservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
-      "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate"])
+      "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
+      "removefailoverdomain="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -79,11 +81,16 @@ def main(argv):
             name = arg
             options = args
         elif opt in ("--removefenceinst"):
-            removefenceinst = True;
+            removefenceinst = True
             name = arg
             options = args
         elif opt in ("--lsfencedev"): lsfencedev = True;
         elif opt in ("--lsfenceinst"): lsfenceinst = True; instance = arg
+        elif opt in ("--addfailoverdomain"):
+            addfailoverdomain = True
+            name = arg
+            options = args
+        elif opt in ("--removefailoverdomain"): removefailoverdomain = True; name = arg
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf(hostname)
@@ -108,6 +115,8 @@ def main(argv):
     if (removefenceinst): remove_fenceinst(hostname, name, options)
     if (lsfencedev): ls_fencedev()
     if (lsfenceinst): ls_fenceinst(arg)
+    if (addfailoverdomain): add_failoverdomain(hostname, name, options)
+    if (removefailoverdomain): remove_failoverdomain(hostname, name)
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -136,12 +145,18 @@ Remotely control cluster infrastructure.
       --removefenceinst <fence device name> <node> <method>
                         Remove all instances of the fence device listed from
                         the given method and node
+      --addfailoverdomain <name> [restricted] [ordered] [nofailback]
+                        Add failover domain
+      --removefailoverdomain <name>
+                        Remove failover domain
+      --addfailoverdomainnode <failover domain> <node> [priority=xx]
+                        Add node to given failover domain
       --lsfencedev      Lists available fence devices and their options
       --lsfenceinst <fence device>
                         Lists available fence instances options for given
                         fence device
       --lsnodes         List all nodes in the cluster
-      --lsservices    List all services in the cluster
+      --lsservices      List all services in the cluster
       --start           Start cluster services on host
       --stop            Stop cluster services on host
       --fence <node>    Fence the node <node>
@@ -479,7 +494,62 @@ def remove_fenceinst(hostname, name, options):
 
     set_cluster_conf(hostname, dom.toxml())
 
+def add_failoverdomain(hostname, name, options):
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
 
+    failoverdomains_array = dom.getElementsByTagName("failoverdomains")
+
+    # Verify failoverdomains and rm exist in cluster.conf file
+    if len(failoverdomains_array) > 0:
+        failoverdomains = failoverdomains_array[0]
+    else:
+        rm_array = dom.getElementsByTagName("rm")
+        if len(rm_array) == 0:
+            rm = dom.getElementsByTagName("cluster")[0].appendChild(dom.createElement("rm"));
+        else:
+            rm = rm_array[0]
+        failoverdomains = rm.appendChild(dom.createElement("failoverdomains"))
+
+    # Verify that there already isn't a failover domain with the same name
+    failoverdomain_found = False
+    for failoverdomain in failoverdomains.getElementsByTagName("failoverdomain"):
+        if failoverdomain.getAttribute("name") == name:
+            failoverdomain_found = True
+            break
+    
+    if failoverdomain_found:
+        print "Failover domain '%s' already exists." % (name)
+        sys.exit(1)
+    
+    failoverdomain = failoverdomains.appendChild(dom.createElement("failoverdomain"))
+    failoverdomain.setAttribute("name",name)
+
+    if "restricted" in options: failoverdomain.setAttribute("restricted", "1")
+    else: failoverdomain.setAttribute("restricted", "0")
+    if "ordered" in options: failoverdomain.setAttribute("ordered", "1")
+    else: failoverdomain.setAttribute("ordered", "0")
+    if "nofailback" in options: failoverdomain.setAttribute("nofailback", "1")
+    else: failoverdomain.setAttribute("nofailback", "0")
+
+    set_cluster_conf(hostname, dom.toxml())
+
+def remove_failoverdomain(hostname, name):
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+
+    failoverdomains = dom.getElementsByTagName("failoverdomains")
+    if len(failoverdomains) > 0:
+        for failoverdomain in failoverdomains[0].getElementsByTagName("failoverdomain"):
+            if failoverdomain.getAttribute("name") == name:
+                failoverdomains[0].removeChild(failoverdomain)
+                set_cluster_conf(hostname, dom.toxml())
+                return
+    else:
+        print "No failoverdomains section found in cluster.conf"
+        sys.exit(1)
+
+    print "Unable to find failover domain '%s' in cluster.conf file." % (name)
+    sys.exit(1)
+    
 def ls_fencedev():
     rng = open(CLUSTERRNG)
     dom = minidom.parseString(rng.read())
