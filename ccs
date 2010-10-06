@@ -26,6 +26,7 @@ def main(argv):
     addfenceinst = removefenceinst = False
     lsfencedev = lsfenceinst = False
     addfailoverdomain = removefailoverdomain = False
+    addservice = False
     passwordset = False
     global password
     global debug
@@ -36,7 +37,7 @@ def main(argv):
       "lsservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
-      "removefailoverdomain="])
+      "removefailoverdomain=", "addservice="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -91,6 +92,10 @@ def main(argv):
             name = arg
             options = args
         elif opt in ("--removefailoverdomain"): removefailoverdomain = True; name = arg
+        elif opt in ("--addservice"):
+            addservice = True
+            name = arg
+            options = args
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf(hostname)
@@ -117,6 +122,7 @@ def main(argv):
     if (lsfenceinst): ls_fenceinst(arg)
     if (addfailoverdomain): add_failoverdomain(hostname, name, options)
     if (removefailoverdomain): remove_failoverdomain(hostname, name)
+    if (addservice): add_service(hostname, name, options)
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -151,6 +157,8 @@ Remotely control cluster infrastructure.
                         Remove failover domain
       --addfailoverdomainnode <failover domain> <node> [priority=xx]
                         Add node to given failover domain
+      --addservice <servicename> [service options] ...
+                        Add service to cluster
       --lsfencedev      Lists available fence devices and their options
       --lsfenceinst <fence device>
                         Lists available fence instances options for given
@@ -198,7 +206,27 @@ def list_services(hostname):
     xml = get_cluster_conf_xml(hostname)
     dom = minidom.parseString(xml)
     for node in dom.getElementsByTagName('service'):
-        print node.getAttribute("name")
+        print_services_map(node,0)
+
+def print_services_map(node,level):
+    num_spaces = level * 2
+    prefix = ""
+    
+    if node.nodeType == minidom.Node.TEXT_NODE:
+        return
+    for i in range(num_spaces):
+        prefix = " " + prefix
+
+    nodeattr = ""
+    if node.attributes != None:
+        length = node.attributes.length
+        for i in range(length):
+            nodeattr = nodeattr + node.attributes.item(i).value
+
+
+    print prefix + node.tagName + ": " + nodeattr
+    for cn in node.childNodes:
+        print_services_map(cn, level + 1)
 
 def list_domains(hostname):
     xml = get_cluster_conf_xml(hostname)
@@ -568,6 +596,33 @@ def ls_fenceinst(fencedev):
                         "option", "action", "separator"]
                 if attrname not in invisible_attrs:
                     print attr.getAttribute("name") + " - " + attr.getAttribute("rha:description")
+
+def add_service(hostname, name, options):
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+
+    # Verify rm section exists in cluster.conf
+    rm_array = dom.getElementsByTagName("rm")
+    if len(rm_array) == 0:
+        rm = dom.getElementsByTagName("cluster")[0].appendChild(dom.createElement("rm"));
+    else:
+        rm = rm_array[0]
+
+    # Verify service doesn't exist with the same name
+    for service in dom.getElementsByTagName('service'):
+        if service.getAttribute("name") == name:
+            print "Service '%s' already exists in cluster.conf." % name
+            sys.exit(1)
+
+    service = dom.getElementsByTagName('rm')[0].appendChild(dom.createElement("service"))
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        service.setAttribute(attr,val)
+
+    service.setAttribute("name", name)
+    set_cluster_conf(hostname, dom.toxml())
 
 # Set the cluster.conf file and increment the version
 # If global variable propagate is true, propagate to entire cluster
