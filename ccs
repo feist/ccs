@@ -6,6 +6,7 @@ from xml.dom import minidom
 import logging
 import os
 import os.path
+import re
 
 RICCI_PORT = 11111
 CLUSTERRNG = "cluster.rng.in"
@@ -13,11 +14,13 @@ CLUSTERRNG = "cluster.rng.in"
 password = None
 debug = False
 propagate = False
+usefile = False
+hostname = "localhost"
+filename = ""
 
 def main(argv):
-    hostname = "localhost"
     getconf = False
-    status = fence = start = stop = False
+    status = start = stop = False
     listnodes = listservices = listdomains = False
     addnode = removenode = getversion = False
     incrementversion = setversion = False
@@ -29,12 +32,11 @@ def main(argv):
     addservice = False
     addsubservice = False
     passwordset = False
-    global password
-    global debug
-    global propagate
+
+    global password, debug, propagate, hostname, usefile, filename
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
-        opts, args = getopt.getopt(argv, "dh:p:", ["help","host=","getconf","status","fence=","start","stop","lsnodes",
+        opts, args = getopt.getopt(argv, "dh:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
       "lsservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
@@ -47,6 +49,10 @@ def main(argv):
         elif opt in ("--host","-h"):
             hostname = arg
             logging.debug("Hostname = %s" % hostname)
+        elif opt in ("--file","-f"):
+            usefile = True
+            filename = arg
+            logging.debug("Filename = %s" % filename)
         elif opt in ("--password", "-p"): passwordset = True ; password = arg
         elif opt in ("--getconf"): getconf = True
         elif opt in ("--status"): status = True
@@ -103,39 +109,39 @@ def main(argv):
             options = args
         elif opt in ("-d"): debug = True
 
-    if (getconf): get_cluster_conf(hostname)
-    if (status): get_cluster_status(hostname)
-    if (fence): fence_node(hostname, node)
-    if (stop): stop_node(hostname) 
-    if (start): start_node(hostname)
-    if (listnodes): list_nodes(hostname)
-    if (listservices): list_services(hostname)
-    if (listdomains): list_domains(hostname)
-    if (addnode): add_node(hostname, node)
-    if (removenode): remove_node(hostname, node)
-    if (getversion): print get_version(hostname)
-    if (setversion): set_version(hostname, version)
-    if (incrementversion): increment_version(hostname)
-    if (createcluster): create_cluster(hostname, clustername)
-    if (addmethod): add_method(hostname, method, options)
-    if (removemethod): remove_method(hostname, method, options)
-    if (addfencedev): add_fencedev(hostname, name, options)
-    if (removefencedev): remove_fencedev(hostname, name)
-    if (addfenceinst): add_fenceinst(hostname, name, options)
-    if (removefenceinst): remove_fenceinst(hostname, name, options)
+    if (getconf): get_cluster_conf()
+    if (status): get_cluster_status()
+    if (stop): stop_node() 
+    if (start): start_node()
+    if (listnodes): list_nodes()
+    if (listservices): list_services()
+    if (listdomains): list_domains()
+    if (addnode): add_node(node)
+    if (removenode): remove_node(node)
+    if (getversion): print get_version()
+    if (setversion): set_version(version)
+    if (incrementversion): increment_version()
+    if (createcluster): create_cluster(clustername)
+    if (addmethod): add_method(method, options)
+    if (removemethod): remove_method(method, options)
+    if (addfencedev): add_fencedev(name, options)
+    if (removefencedev): remove_fencedev(name)
+    if (addfenceinst): add_fenceinst(name, options)
+    if (removefenceinst): remove_fenceinst(name, options)
     if (lsfencedev): ls_fencedev()
     if (lsfenceinst): ls_fenceinst(arg)
-    if (addfailoverdomain): add_failoverdomain(hostname, name, options)
-    if (removefailoverdomain): remove_failoverdomain(hostname, name)
-    if (addservice): add_service(hostname, name, options)
-    if (addsubservice): add_subservice(hostname, name, options)
+    if (addfailoverdomain): add_failoverdomain(name, options)
+    if (removefailoverdomain): remove_failoverdomain(name)
+    if (addservice): add_service(name, options)
+    if (addsubservice): add_subservice(name, options)
 
 def usage():
     print """Usage: ccs [OPTION]...
 Remotely control cluster infrastructure.
 
-      --help            Display this help and exit
-  -h, --host            Ricci host to connect to (defaults to localhost)
+  -h, --help            Display this help and exit
+  -h, --host [host]     Ricci host to connect to (defaults to localhost)
+  -f, --file [file]     Read from file 
   -p, --password        Root password for node running ricci
       --getconf         Print current cluster.conf file
       --status          Print current cluster status
@@ -193,36 +199,32 @@ Service Operations:
 
   """
 
-def fence_node(hostname, node):
-    xml = send_ricci_command(hostname, "cluster", "fence_node",("nodename","string",node)) 
+def stop_node():
+    xml = send_ricci_command("cluster", "stop_node")
     print xml
     
-def stop_node(hostname):
-    xml = send_ricci_command(hostname, "cluster", "stop_node")
+def start_node():
+    xml = send_ricci_command("cluster", "start_node")
     print xml
     
-def start_node(hostname):
-    xml = send_ricci_command(hostname, "cluster", "start_node")
-    print xml
-    
-def get_cluster_conf(hostname):
-    xml = get_cluster_conf_xml(hostname)
+def get_cluster_conf():
+    xml = get_cluster_conf_xml()
     xml = minidom.parseString(xml).getElementsByTagName('cluster')[0].toprettyxml(indent='  ',newl='')
     print xml
 
-def get_cluster_status(hostname):
-    xml = send_ricci_command(hostname,"cluster","status")
+def get_cluster_status():
+    xml = send_ricci_command("cluster","status")
     xml = minidom.parseString(xml).getElementsByTagName('cluster')[0].toprettyxml(indent='  ',newl='')
     print xml
 
-def list_nodes(hostname):
-    xml = get_cluster_conf_xml(hostname)
+def list_nodes():
+    xml = get_cluster_conf_xml()
     dom = minidom.parseString(xml)
     for node in dom.getElementsByTagName('clusternode'):
         print node.getAttribute("name")
 
-def list_services(hostname):
-    xml = get_cluster_conf_xml(hostname)
+def list_services():
+    xml = get_cluster_conf_xml()
     dom = minidom.parseString(xml)
     for node in dom.getElementsByTagName('service'):
         print_services_map(node,0)
@@ -247,8 +249,8 @@ def print_services_map(node,level):
     for cn in node.childNodes:
         print_services_map(cn, level + 1)
 
-def list_domains(hostname):
-    xml = get_cluster_conf_xml(hostname)
+def list_domains():
+    xml = get_cluster_conf_xml()
     dom = minidom.parseString(xml)
     for node in dom.getElementsByTagName('failoverdomain'):
         print node.getAttribute("name")
@@ -256,10 +258,10 @@ def list_domains(hostname):
 # Add a node to the cluster.conf
 #   Before adding a node we need to verify another node
 #   with the same name doesn't already exist
-def add_node(hostname, node_to_add):
+def add_node(node_to_add):
     nodeid_list = set()
 
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    dom = minidom.parseString(get_cluster_conf_xml())
     for node in dom.getElementsByTagName('clusternode'):
         if (node.getAttribute("name") == node_to_add):
             print "Node '%s' already exists in cluster.conf" % node_to_add
@@ -277,13 +279,13 @@ def add_node(hostname, node_to_add):
     node.setAttribute("nodeid",str(nodeid))
     node.setAttribute("votes","1")
     dom.getElementsByTagName("clusternodes")[0].appendChild(node)
-    set_cluster_conf(hostname,dom.toxml())
+    set_cluster_conf(dom.toxml())
     print "Node %s added." % (node_to_add)
 
-def remove_node(hostname, node_to_remove):
+def remove_node(node_to_remove):
     nodeFound = False
 
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    dom = minidom.parseString(get_cluster_conf_xml())
     for node in dom.getElementsByTagName('clusternode'):
         if (node.getAttribute("name") == node_to_remove):
             node.parentNode.removeChild(node)
@@ -293,24 +295,30 @@ def remove_node(hostname, node_to_remove):
         print "Unable to find node %s" % node_to_remove
         sys.exit(1)
 
-    set_cluster_conf(hostname,dom.toxml())
+    set_cluster_conf(dom.toxml())
 
-def get_version(hostname):
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+def get_version():
+    dom = minidom.parseString(get_cluster_conf_xml())
     return dom.getElementsByTagName('cluster')[0].getAttribute("config_version")
 
-def set_version(hostname, version):
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+def set_version(version):
+    dom = minidom.parseString(get_cluster_conf_xml())
     dom.getElementsByTagName('cluster')[0].setAttribute("config_version",version)
-    set_cluster_conf(hostname,dom.toxml(), False)
+    set_cluster_conf(dom.toxml(), False)
 
-def increment_version(hostname):
-    new_version = int(get_version(hostname)) + 1
-    set_version(hostname,str(new_version))
+def increment_version():
+    new_version = int(get_version()) + 1
+    set_version(str(new_version))
     print new_version
 
-def get_cluster_conf_xml(hostname):
-    xml = send_ricci_command(hostname, "cluster", "get_cluster.conf")
+def get_cluster_conf_xml():
+    if usefile:
+        f = open(filename, 'r')
+        xml = f.read()
+        f.close()
+    else:
+        xml = send_ricci_command("cluster", "get_cluster.conf")
+
     dom = minidom.parseString(xml)
     if dom.getElementsByTagName('cluster').length > 0:
       return dom.getElementsByTagName('cluster')[0].toxml()
@@ -346,11 +354,11 @@ def empty_cluster_conf(name="cluster"):
 
     return newdoc.toprettyxml()
 
-def create_cluster(hostname, clustername):
+def create_cluster(clustername):
     xml = empty_cluster_conf(clustername)
-    set_cluster_conf(hostname,xml)
+    set_cluster_conf(xml)
 
-def add_method(hostname, method, options):
+def add_method(method, options):
     method_found = False
     node_found = False
 
@@ -360,7 +368,7 @@ def add_method(hostname, method, options):
 
     nodename = options[0]
 
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    dom = minidom.parseString(get_cluster_conf_xml())
     for node in dom.getElementsByTagName('clusternode'):
         if (node.getAttribute("name") == nodename):
             node_found = True
@@ -388,10 +396,10 @@ def add_method(hostname, method, options):
     methodnode.setAttribute("name", method)
     fencenode.appendChild(methodnode)
     node.appendChild(fencenode)
-    set_cluster_conf(hostname, dom.toxml())
+    set_cluster_conf(dom.toxml())
     print "Method %s added to %s." % (method, nodename)
 
-def remove_method(hostname, method, options):
+def remove_method(method, options):
     method_found = False
     node_found = False
     
@@ -400,7 +408,7 @@ def remove_method(hostname, method, options):
         sys.exit(2)
 
     nodename = options[0]
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    dom = minidom.parseString(get_cluster_conf_xml())
     for node in dom.getElementsByTagName('clusternode'):
         if (node.getAttribute("name") == nodename):
             node_found = True
@@ -418,11 +426,11 @@ def remove_method(hostname, method, options):
         sys.exit(1)
 
     methodnode.parentNode.removeChild(methodnode)
-    set_cluster_conf(hostname, dom.toxml())
+    set_cluster_conf(dom.toxml())
     print "Method %s removed from %s." % (method, nodename)
 
-def add_fencedev(hostname, name, options):
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+def add_fencedev(name, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
 
     # Verify fencedevices section exists in cluster.conf
     fencedevices = dom.getElementsByTagName('fencedevices')
@@ -449,11 +457,11 @@ def add_fencedev(hostname, name, options):
     newfencedev.setAttribute("name", name)
     fencedevelem = dom.getElementsByTagName('fencedevices')[0]
     fencedevelem.appendChild(newfencedev)
-    set_cluster_conf(hostname, dom.toxml())
+    set_cluster_conf(dom.toxml())
 
-def remove_fencedev(hostname, name):
+def remove_fencedev(name):
     fencedev_found = False
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    dom = minidom.parseString(get_cluster_conf_xml())
 
     # Verify fence device exists before attempting to remove
     for fencedev in dom.getElementsByTagName('fencedevice'):
@@ -465,9 +473,9 @@ def remove_fencedev(hostname, name):
         print "Fence device '%s' does not exist in cluster.conf." % name
         sys.exit(1)
 
-    set_cluster_conf(hostname, dom.toxml())
+    set_cluster_conf(dom.toxml())
 
-def add_fenceinst(hostname, name, options):
+def add_fenceinst(name, options):
     fencedev_found = method_found = False
 
     if len(options) < 2:
@@ -476,7 +484,7 @@ def add_fenceinst(hostname, name, options):
         
     nodename = options[0]
     methodname = options[1]
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    dom = minidom.parseString(get_cluster_conf_xml())
 
     # Verify fence device exists
     for fencedev in dom.getElementsByTagName('fencedevice'):
@@ -511,9 +519,9 @@ def add_fenceinst(hostname, name, options):
 
     newfenceinst.setAttribute("name", name)
     method.appendChild(newfenceinst)
-    set_cluster_conf(hostname, dom.toxml())
+    set_cluster_conf(dom.toxml())
     
-def remove_fenceinst(hostname, name, options):
+def remove_fenceinst(name, options):
     fenceinst_found = False
 
     if len(options) < 2:
@@ -522,7 +530,7 @@ def remove_fenceinst(hostname, name, options):
         
     nodename = options[0]
     methodname = options[1]
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    dom = minidom.parseString(get_cluster_conf_xml())
 
     # Verify fence instance exists before attempting to remove
     for node in dom.getElementsByTagName('clusternode'):
@@ -539,10 +547,10 @@ def remove_fenceinst(hostname, name, options):
         print "Fence instance '%s' for node '%s' in method '%s' does not exist in cluster.conf." % (name, nodename, methodname)
         sys.exit(1)
 
-    set_cluster_conf(hostname, dom.toxml())
+    set_cluster_conf(dom.toxml())
 
-def add_failoverdomain(hostname, name, options):
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+def add_failoverdomain(name, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
 
     failoverdomains_array = dom.getElementsByTagName("failoverdomains")
 
@@ -578,17 +586,17 @@ def add_failoverdomain(hostname, name, options):
     if "nofailback" in options: failoverdomain.setAttribute("nofailback", "1")
     else: failoverdomain.setAttribute("nofailback", "0")
 
-    set_cluster_conf(hostname, dom.toxml())
+    set_cluster_conf(dom.toxml())
 
-def remove_failoverdomain(hostname, name):
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+def remove_failoverdomain(name):
+    dom = minidom.parseString(get_cluster_conf_xml())
 
     failoverdomains = dom.getElementsByTagName("failoverdomains")
     if len(failoverdomains) > 0:
         for failoverdomain in failoverdomains[0].getElementsByTagName("failoverdomain"):
             if failoverdomain.getAttribute("name") == name:
                 failoverdomains[0].removeChild(failoverdomain)
-                set_cluster_conf(hostname, dom.toxml())
+                set_cluster_conf(dom.toxml())
                 return
     else:
         print "No failoverdomains section found in cluster.conf"
@@ -616,8 +624,8 @@ def ls_fenceinst(fencedev):
                 if attrname not in invisible_attrs:
                     print attr.getAttribute("name") + " - " + attr.getAttribute("rha:description")
 
-def add_service(hostname, name, options):
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+def add_service(name, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
 
     # Verify rm section exists in cluster.conf
     rm_array = dom.getElementsByTagName("rm")
@@ -641,10 +649,10 @@ def add_service(hostname, name, options):
         service.setAttribute(attr,val)
 
     service.setAttribute("name", name)
-    set_cluster_conf(hostname, dom.toxml())
+    set_cluster_conf(dom.toxml())
 
-def add_subservice(hostname, name, options):
-    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+def add_subservice(name, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
     serviceFound = False
 
     # Verify top level service exists
@@ -665,11 +673,11 @@ def add_subservice(hostname, name, options):
             print "Invalid option: %s" % option
             sys.exit(1)
         subservice.setAttribute(attr,val)
-    set_cluster_conf(hostname, dom.toxml())
+    set_cluster_conf(dom.toxml())
 
 # Set the cluster.conf file and increment the version
 # If global variable propagate is true, propagate to entire cluster
-def set_cluster_conf(hostname, xml, increment = True):
+def set_cluster_conf(xml, increment = True):
     dom = minidom.parseString(xml)
 
     if increment:
@@ -681,14 +689,21 @@ def set_cluster_conf(hostname, xml, increment = True):
     xml = xml.replace('<?xml version="1.0" ?>','')
     log_msg (xml)
 
-    if propagate:
-      log_msg (send_ricci_command(hostname, "cluster", "set_cluster.conf", ("cluster.conf","xml","",xml), ("propagate", "boolean", "true")))
+    if usefile:
+        xml = dom.toprettyxml("  ","\n")
+        xml = xml.replace('<?xml version="1.0" ?>','')
+        xml = re.sub(r"(?m)^\s*\n","", xml)
+        f = open(filename, 'w')
+        f.write(xml)
+        f.close()
     else:
-      log_msg (send_ricci_command(hostname, "cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
+        if propagate:
+          log_msg (send_ricci_command("cluster", "set_cluster.conf", ("cluster.conf","xml","",xml), ("propagate", "boolean", "true")))
+        else:
+          log_msg (send_ricci_command("cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
 
 
-def send_ricci_command(hostname, module, command, *vars):
-    global password
+def send_ricci_command(module, command, *vars):
     variables = ""
 
     for value in vars:
@@ -700,7 +715,7 @@ def send_ricci_command(hostname, module, command, *vars):
     # If a password is set, then we authenticate
     if password != None:
         msg = '<ricci function="authenticate" password="%s" version="1.0"/>' % password
-        res = send_to_ricci(hostname, msg)     
+        res = send_to_ricci(msg)     
         dom = minidom.parseString(res[1])
         ricci_elem = dom.getElementsByTagName('ricci')
         if (ricci_elem[0].getAttribute("authenticated") != "true"): 
@@ -708,12 +723,12 @@ def send_ricci_command(hostname, module, command, *vars):
             sys.exit(1)
     
     msg = '<ricci function="process_batch" async="false" version="1.0"><batch><module name="%s"><request API_version="1.0"><function_call name="%s">%s</function_call></request></module></batch></ricci>' % (module,command,variables)
-    res = send_to_ricci(hostname, msg)
+    res = send_to_ricci(msg)
     dom = minidom.parseString(res[1].replace('\t',''))
     xml = dom.getElementsByTagName('function_response')[0].toxml()
     return xml 
 
-def send_to_ricci(hostname, msg):
+def send_to_ricci(msg):
     cert = os.path.expanduser("~/.ricci/cacert.pem")
     key = os.path.expanduser("~/.ricci/privkey.pem")
     config = os.path.expanduser("~/.ricci/cacert.config")
@@ -784,8 +799,6 @@ def send_to_ricci(hostname, msg):
     return res1, res2
 
 def log_msg(message):
-    global debug
-
     if debug == True:
       print message
 
