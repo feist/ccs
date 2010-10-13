@@ -27,6 +27,7 @@ def main(argv):
     lsfencedev = lsfenceinst = False
     addfailoverdomain = removefailoverdomain = False
     addservice = False
+    addsubservice = False
     passwordset = False
     global password
     global debug
@@ -37,7 +38,7 @@ def main(argv):
       "lsservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
-      "removefailoverdomain=", "addservice="])
+      "removefailoverdomain=", "addservice=", "addsubservice="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -96,6 +97,10 @@ def main(argv):
             addservice = True
             name = arg
             options = args
+        elif opt in ("--addsubservice"):
+            addsubservice = True
+            name = arg
+            options = args
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf(hostname)
@@ -123,6 +128,7 @@ def main(argv):
     if (addfailoverdomain): add_failoverdomain(hostname, name, options)
     if (removefailoverdomain): remove_failoverdomain(hostname, name)
     if (addservice): add_service(hostname, name, options)
+    if (addsubservice): add_subservice(hostname, name, options)
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -159,6 +165,8 @@ Remotely control cluster infrastructure.
                         Add node to given failover domain
       --addservice <servicename> [service options] ...
                         Add service to cluster
+      --addsubservice <servicename> <service type> [service options] ...
+                        Add individual services
       --lsfencedev      Lists available fence devices and their options
       --lsfenceinst <fence device>
                         Lists available fence instances options for given
@@ -622,6 +630,30 @@ def add_service(hostname, name, options):
         service.setAttribute(attr,val)
 
     service.setAttribute("name", name)
+    set_cluster_conf(hostname, dom.toxml())
+
+def add_subservice(hostname, name, options):
+    dom = minidom.parseString(get_cluster_conf_xml(hostname))
+    serviceFound = False
+
+    # Verify top level service exists
+    for service in dom.getElementsByTagName("service"):
+        if service.getAttribute("name") == name:
+            serviceFound = True
+            break;
+
+    if serviceFound == False:
+        print "Unable to find service: %s" % name
+        sys.exit(1)
+
+    subservice_type = options.pop(0)
+    subservice = service.appendChild(dom.createElement(subservice_type))
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        subservice.setAttribute(attr,val)
     set_cluster_conf(hostname, dom.toxml())
 
 # Set the cluster.conf file and increment the version
