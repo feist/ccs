@@ -139,15 +139,31 @@ Remotely control cluster infrastructure.
   -p, --password        Root password for node running ricci
       --getconf         Print current cluster.conf file
       --status          Print current cluster status
+
+Cluster Operations:
       --createcluster <cluster>
                         Create a new cluster.conf
+      --getversion      Get the current cluster.conf version
+      --setversion      Set the cluster.conf version
+      --incversion      Increment the cluster.conf version by 1
+                        scp and put them in the current directory
+      --start           Start cluster services on host
+      --stop            Stop cluster services on host
+
+Node Operations:
+      --lsnodes         List all nodes in the cluster
       --addnode <node>  Add node <node> to the cluster
       --removenode <node>
                         Remove a node from the cluster
+
+Fencing Operations:
+      --lsfencedev      Lists available fence devices and their options
+      --lsfenceinst <fence device>
+                        Lists available fence instances options for given
       --addmethod <method> <node>
-                        Add a method to a specific node
+                        Add a fence method to a specific node
       --removemethod <method> <node>
-                        Remove a method from a specific node
+                        Remove a fence method from a specific node
       --addfencedev <device> <options>
                         Add fence device
       --removefencedev <fence device name>
@@ -157,29 +173,24 @@ Remotely control cluster infrastructure.
       --removefenceinst <fence device name> <node> <method>
                         Remove all instances of the fence device listed from
                         the given method and node
+      --fence <node>    Fence the node <node>
+
+Failover Domain Operations:
       --addfailoverdomain <name> [restricted] [ordered] [nofailback]
                         Add failover domain
       --removefailoverdomain <name>
                         Remove failover domain
       --addfailoverdomainnode <failover domain> <node> [priority=xx]
                         Add node to given failover domain
+
+Service Operations:
       --addservice <servicename> [service options] ...
                         Add service to cluster
       --addsubservice <servicename> <service type> [service options] ...
                         Add individual services
-      --lsfencedev      Lists available fence devices and their options
-      --lsfenceinst <fence device>
-                        Lists available fence instances options for given
                         fence device
-      --lsnodes         List all nodes in the cluster
       --lsservices      List all services in the cluster
-      --start           Start cluster services on host
-      --stop            Stop cluster services on host
-      --fence <node>    Fence the node <node>
-      --getversion      Get the current cluster.conf version
-      --setversion      Set the cluster.conf version
-      --incversion      Increment the cluster.conf version by 1
-                        scp and put them in the current directory
+
   """
 
 def fence_node(hostname, node):
