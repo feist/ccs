@@ -29,8 +29,8 @@ def main(argv):
     addfenceinst = removefenceinst = False
     lsfencedev = lsfenceinst = False
     addfailoverdomain = removefailoverdomain = False
-    addservice = False
-    addsubservice = False
+    addservice = addsubservice = addresource = False
+    removeservice = removesubservice = removeresource = False
     passwordset = False
 
     global password, debug, propagate, hostname, usefile, filename
@@ -40,7 +40,8 @@ def main(argv):
       "lsservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
-      "removefailoverdomain=", "addservice=", "addsubservice="])
+      "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
+      "removeresource="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -103,8 +104,23 @@ def main(argv):
             addservice = True
             name = arg
             options = args
+        elif opt in ("--removeservice"):
+            removeservice = True
+            name = arg
         elif opt in ("--addsubservice"):
             addsubservice = True
+            name = arg
+            options = args
+        elif opt in ("--removesubservice"):
+            removesubservice = True
+            name = arg
+            options = args
+        elif opt in ("--addresource"):
+            addresource = True
+            name = arg
+            options = args
+        elif opt in ("--removeresource"):
+            removeresource = True
             name = arg
             options = args
         elif opt in ("-d"): debug = True
@@ -133,7 +149,11 @@ def main(argv):
     if (addfailoverdomain): add_failoverdomain(name, options)
     if (removefailoverdomain): remove_failoverdomain(name)
     if (addservice): add_service(name, options)
+    if (removeservice): remove_service(name)
     if (addsubservice): add_subservice(name, options)
+    if (removesubservice): remove_subservice(name, options)
+    if (addresource): add_resource(name, options)
+    if (removeresource): remove_resource(name, options)
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -192,10 +212,21 @@ Failover Domain Operations:
 Service Operations:
       --addservice <servicename> [service options] ...
                         Add service to cluster
+      --removeservice <servicename>
+                        Removes a service and all of its subservices
       --addsubservice <servicename> <service type> [service options] ...
                         Add individual services
-                        fence device
-      --lsservices      List all services in the cluster
+      --removesubservice <servicename> <service type> [subservice number]
+                        Removes a specific subservice (will remove first matching
+                                                       subservice unless subservice
+                                                       number is given)
+      --addresource <resource type> [resource options] ...
+                        Add resources to the cluster
+      --removeresource <resource type> [resource number]
+                        Remove specified resource (will remove first matching
+                                                   resource unless resource
+                                                   number is given)
+      --lsservices      List currently configured services and resources in the cluster
 
   """
 
@@ -228,6 +259,8 @@ def list_services():
     dom = minidom.parseString(xml)
     for node in dom.getElementsByTagName('service'):
         print_services_map(node,0)
+    for node in dom.getElementsByTagName('resources'):
+        print_services_map(node,0)
 
 def print_services_map(node,level):
     num_spaces = level * 2
@@ -242,9 +275,9 @@ def print_services_map(node,level):
     if node.attributes != None:
         length = node.attributes.length
         for i in range(length):
-            nodeattr = nodeattr + node.attributes.item(i).value
+            nodeattr = nodeattr + node.attributes.item(i).name + ": " + node.attributes.item(i).value + ", "
 
-
+    nodeattr = re.sub(r", $","", nodeattr)
     print prefix + node.tagName + ": " + nodeattr
     for cn in node.childNodes:
         print_services_map(cn, level + 1)
@@ -651,6 +684,29 @@ def add_service(name, options):
     service.setAttribute("name", name)
     set_cluster_conf(dom.toxml())
 
+def remove_service(name):
+    serviceRemoved = False
+
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    rm = dom.getElementsByTagName("rm")
+    if len(rm) > 0:
+        rm = rm[0]
+        services = rm.getElementsByTagName("service")
+        for service in services:
+            if service.getAttribute("name") == name:
+                rm.removeChild(service)
+                serviceRemoved = True
+    else:
+        print "No <rm> section in cluster.conf"
+        sys.exit(1)
+
+    if not serviceRemoved:
+        print "Unable to find service: %s" % name
+        sys.exit(1)
+
+    set_cluster_conf(dom.toxml())
+
 def add_subservice(name, options):
     dom = minidom.parseString(get_cluster_conf_xml())
     serviceFound = False
@@ -673,6 +729,125 @@ def add_subservice(name, options):
             print "Invalid option: %s" % option
             sys.exit(1)
         subservice.setAttribute(attr,val)
+    set_cluster_conf(dom.toxml())
+
+def remove_subservice(name, options):
+    subserviceRemoved = False
+    subservice_type = options[0]
+    if len(options) > 1:
+        subservice_count = int(options[1])
+    else:
+        subservice_count = 1
+
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    rm = dom.getElementsByTagName("rm")
+    if len(rm) > 0:
+        rm = rm[0]
+        services = rm.getElementsByTagName("service")
+        for service in services:
+            if service.getAttribute("name") == name:
+                for subservice in service.childNodes:
+                    if subservice.nodeType == minidom.Node.TEXT_NODE:
+                        continue
+                    if subservice.tagName == subservice_type:
+                        if subservice_count == 1:
+                            service.removeChild(subservice)
+                            subserviceRemoved = True
+                            break
+                        else: subservice_count = subservice_count - 1
+                break
+    else:
+        print "No <rm> section in cluster.conf"
+        sys.exit(1)
+
+    if subserviceRemoved == False:
+        print "Unable to find subservice type: %s" % name
+        sys.exit(1)
+
+    set_cluster_conf(dom.toxml())
+
+def add_resource(type, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # Verify resources section exists in cluster.conf
+    resources = dom.getElementsByTagName('resources')
+    if len(resources) == 0:
+        resources = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("resources"))
+    elif len(resources) > 1:
+        print "Error: Too many resources elements in cluster.conf"
+        sys.exit(1)
+    else:
+        resources = resources[0]
+
+    # Verify name is unique, if no name then we don't search for duplicates
+    resname = False
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if attr == "name":
+            resname = val
+            break
+
+    if resname != False:
+        for resource in resources.childNodes:
+            if resource.nodeType == minidom.Node.TEXT_NODE:
+                continue
+            if resource.getAttribute("name") == resname:
+                print "Duplicate name: %s" % resname
+                sys.exit(1)
+
+    newresource = dom.createElement(type)
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        newresource.setAttribute(attr,val)
+
+    resources = dom.getElementsByTagName('resources')[0]
+    resources.appendChild(newresource)
+    set_cluster_conf(dom.toxml())
+
+# Removes the first resource that matches all the options
+def remove_resource(type, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # Verify resources section exists in cluster.conf
+    resources = dom.getElementsByTagName('resources')
+    if len(resources) != 1:
+        print "Error: resources section not present or improperly formatted"
+        sys.exit(1)
+    else:
+        resources = resources[0]
+
+    resource_options = {}
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        resource_options[attr] = val
+
+    for resource in resources.childNodes:
+        if resource.nodeType == minidom.Node.TEXT_NODE:
+            continue
+        if resource.tagName == type:
+            resourceMatch = False
+            for option,val in resource_options.iteritems():
+                if resource.getAttribute(option) != val:
+                    resourceMatch = False
+                    break
+                else:
+                    resourceMatch = True
+            if resourceMatch == True:
+                break
+
+    if resourceMatch != True:
+        print "Unable to find matching resource: %s, %s" % (type,options)
+        sys.exit(1)
+
+    resources.removeChild(resource)
+            
     set_cluster_conf(dom.toxml())
 
 # Set the cluster.conf file and increment the version
