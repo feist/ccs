@@ -31,6 +31,7 @@ def main(argv):
     addfailoverdomain = removefailoverdomain = False
     addservice = addsubservice = addresource = False
     removeservice = removesubservice = removeresource = False
+    addquorumd = addheuristic = False
     passwordset = False
 
     global password, debug, propagate, hostname, usefile, filename
@@ -41,7 +42,7 @@ def main(argv):
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
-      "removeresource="])
+      "removeresource=", "addquorumd","addheuristic"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -123,6 +124,12 @@ def main(argv):
             removeresource = True
             name = arg
             options = args
+        elif opt in ("--addquorumd"):
+            addquorumd = True
+            options = args
+        elif opt in ("--addheuristic"):
+            addheuristic = True
+            options = args
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf()
@@ -154,6 +161,8 @@ def main(argv):
     if (removesubservice): remove_subservice(name, options)
     if (addresource): add_resource(name, options)
     if (removeresource): remove_resource(name, options)
+    if (addquorumd): add_quorumd(options)
+    if (addheuristic): add_heuristic(options)
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -229,6 +238,12 @@ Service Operations:
                                                    number is given)
       --lsservices      List currently configured services and resources in
                         the cluster
+
+Quorum Operations:
+      --addquorumd [quorumd options] ...
+                        Add quorumd options
+      --addheuristic [heuristic options] ...
+                        Add heuristics to quorumd
 
   """
 
@@ -850,6 +865,52 @@ def remove_resource(type, options):
 
     resources.removeChild(resource)
             
+    set_cluster_conf(dom.toxml())
+
+def add_quorumd(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # If quorumd section exists we rewrite it, else we create a new one
+    quorumd = dom.getElementsByTagName('quorumd')
+    if len(quorumd) == 0:
+        quorumd = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("quorumd"))
+    elif len(quorumd) > 1:
+        print "Error: Too many quorumd elements in cluster.conf"
+        sys.exit(1)
+    else:
+        quorumd = quorumd[0]
+
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        quorumd.setAttribute(attr,val)
+
+    set_cluster_conf(dom.toxml())
+
+def add_heuristic(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # If quorumd section we use it, else we create an empty one
+    quorumd = dom.getElementsByTagName('quorumd')
+    if len(quorumd) == 0:
+        quorumd = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("quorumd"))
+    elif len(quorumd) > 1:
+        print "Error: Too many quorumd elements in cluster.conf"
+        sys.exit(1)
+    else:
+        quorumd = quorumd[0]
+
+    heuristic = dom.createElement("heuristic")
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        heuristic.setAttribute(attr,val)
+
+    quorumd.appendChild(heuristic)
     set_cluster_conf(dom.toxml())
 
 # Set the cluster.conf file and increment the version
