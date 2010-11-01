@@ -32,6 +32,7 @@ def main(argv):
     addservice = addsubservice = addresource = False
     removeservice = removesubservice = removeresource = False
     addquorumd = addheuristic = False
+    settotem = setrm = False
     passwordset = False
 
     global password, debug, propagate, hostname, usefile, filename
@@ -42,7 +43,7 @@ def main(argv):
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
-      "removeresource=", "addquorumd","addheuristic"])
+      "removeresource=", "addquorumd","addheuristic","settotem", "setrm"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -124,12 +125,10 @@ def main(argv):
             removeresource = True
             name = arg
             options = args
-        elif opt in ("--addquorumd"):
-            addquorumd = True
-            options = args
-        elif opt in ("--addheuristic"):
-            addheuristic = True
-            options = args
+        elif opt in ("--addquorumd"): addquorumd = True; options = args
+        elif opt in ("--addheuristic"): addheuristic = True; options = args
+        elif opt in ("--settotem"): settotem = True;  options = args
+        elif opt in ("--setrm"): setrm = True;  options = args
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf()
@@ -163,6 +162,8 @@ def main(argv):
     if (removeresource): remove_resource(name, options)
     if (addquorumd): add_quorumd(options)
     if (addheuristic): add_heuristic(options)
+    if (settotem): set_totem(options)
+    if (setrm): set_rm(options)
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -245,6 +246,11 @@ Quorum Operations:
       --addheuristic [heuristic options] ...
                         Add heuristics to quorumd
 
+Misc Options
+      --addtotem [totem options]
+                        Set totem options
+      --addrm [resource manager options]
+                        Set resource manager options
   """
 
 def stop_node():
@@ -497,12 +503,7 @@ def add_fencedev(name, options):
             sys.exit(1)
 
     newfencedev = dom.createElement("fencedevice")
-    for option in options:
-        (attr, sep, val) = option.partition('=')
-        if (sep == ""):
-            print "Invalid option: %s" % option
-            sys.exit(1)
-        newfencedev.setAttribute(attr,val)
+    newfencedev = set_element_attributes(newfencedev, options)
 
     newfencedev.setAttribute("name", name)
     fencedevelem = dom.getElementsByTagName('fencedevices')[0]
@@ -560,12 +561,7 @@ def add_fenceinst(name, options):
         sys.exit(1)
 
     newfenceinst = dom.createElement("device")
-    for option in options[2:]:
-        (attr, sep, val) = option.partition('=')
-        if (sep == ""):
-            print "Invalid option: %s" % option
-            sys.exit(1)
-        newfenceinst.setAttribute(attr,val)
+    newfenceinst = set_element_attributes(newfenceinst, options[2:])
 
     newfenceinst.setAttribute("name", name)
     method.appendChild(newfenceinst)
@@ -691,12 +687,7 @@ def add_service(name, options):
             sys.exit(1)
 
     service = dom.getElementsByTagName('rm')[0].appendChild(dom.createElement("service"))
-    for option in options:
-        (attr, sep, val) = option.partition('=')
-        if (sep == ""):
-            print "Invalid option: %s" % option
-            sys.exit(1)
-        service.setAttribute(attr,val)
+    service = set_element_attributes(service, options)
 
     service.setAttribute("name", name)
     set_cluster_conf(dom.toxml())
@@ -740,12 +731,8 @@ def add_subservice(name, options):
 
     subservice_type = options.pop(0)
     subservice = service.appendChild(dom.createElement(subservice_type))
-    for option in options:
-        (attr, sep, val) = option.partition('=')
-        if (sep == ""):
-            print "Invalid option: %s" % option
-            sys.exit(1)
-        subservice.setAttribute(attr,val)
+    subservice = set_element_attributes(subservice, options)
+
     set_cluster_conf(dom.toxml())
 
 def remove_subservice(name, options):
@@ -814,12 +801,7 @@ def add_resource(type, options):
                 sys.exit(1)
 
     newresource = dom.createElement(type)
-    for option in options:
-        (attr, sep, val) = option.partition('=')
-        if (sep == ""):
-            print "Invalid option: %s" % option
-            sys.exit(1)
-        newresource.setAttribute(attr,val)
+    newresource = set_element_attributes(newresource, options)
 
     resources = dom.getElementsByTagName('resources')[0]
     resources.appendChild(newresource)
@@ -880,19 +862,14 @@ def add_quorumd(options):
     else:
         quorumd = quorumd[0]
 
-    for option in options:
-        (attr, sep, val) = option.partition('=')
-        if (sep == ""):
-            print "Invalid option: %s" % option
-            sys.exit(1)
-        quorumd.setAttribute(attr,val)
+    quorumd = set_element_attributes(quorumd, options)
 
     set_cluster_conf(dom.toxml())
 
 def add_heuristic(options):
     dom = minidom.parseString(get_cluster_conf_xml())
 
-    # If quorumd section we use it, else we create an empty one
+    # If quorumd section is present we use it, else we create an empty one
     quorumd = dom.getElementsByTagName('quorumd')
     if len(quorumd) == 0:
         quorumd = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("quorumd"))
@@ -903,15 +880,60 @@ def add_heuristic(options):
         quorumd = quorumd[0]
 
     heuristic = dom.createElement("heuristic")
+    heuristic = set_element_attributes(heuristic, options)
+
+    quorumd.appendChild(heuristic)
+    set_cluster_conf(dom.toxml())
+
+def set_totem(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # If totem section is present we use it, else we create it
+    totem = dom.getElementsByTagName('totem')
+    if len(totem) == 0:
+        totem = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("totem"))
+    elif len(totem) > 1:
+        print "Error: Too many totem elements in cluster.conf"
+        sys.exit(1)
+    else:
+        totem = totem[0]
+
+    while(totem.attributes.length != 0):
+        totem.removeAttribute(totem.attributes.item(0).name)
+
+    totem = set_element_attributes(totem, options)
+    set_cluster_conf(dom.toxml())
+
+def set_rm(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # If rm section is present we use it, else we create it
+    rm = dom.getElementsByTagName('rm')
+    if len(rm) == 0:
+        rm = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("rm"))
+    elif len(rm) > 1:
+        print "Error: Too many rm elements in cluster.conf"
+        sys.exit(1)
+    else:
+        rm = rm[0]
+
+    while(rm.attributes.length != 0):
+        rm.removeAttribute(rm.attributes.item(0).name)
+    rm = set_element_attributes(rm, options)
+    set_cluster_conf(dom.toxml())
+
+
+# Sets the attributes of a specific xml element where options
+# is an array of strings containing attribute=value
+# returns the modified element
+def set_element_attributes(element, options):
     for option in options:
         (attr, sep, val) = option.partition('=')
         if (sep == ""):
             print "Invalid option: %s" % option
             sys.exit(1)
-        heuristic.setAttribute(attr,val)
-
-    quorumd.appendChild(heuristic)
-    set_cluster_conf(dom.toxml())
+        element.setAttribute(attr,val)
+    return element
 
 # Set the cluster.conf file and increment the version
 # If global variable propagate is true, propagate to entire cluster
