@@ -217,8 +217,9 @@ Service Operations:
       --addsubservice <servicename> <service type> [service options] ...
                         Add individual services
       --removesubservice <servicename> <service type> [subservice number]
-                        Removes a specific subservice (will remove first matching
-                                                       subservice unless subservice
+                        Removes a specific subservice (will remove first
+                                                       matching subservice
+                                                       unless subservice
                                                        number is given)
       --addresource <resource type> [resource options] ...
                         Add resources to the cluster
@@ -226,7 +227,8 @@ Service Operations:
                         Remove specified resource (will remove first matching
                                                    resource unless resource
                                                    number is given)
-      --lsservices      List currently configured services and resources in the cluster
+      --lsservices      List currently configured services and resources in
+                        the cluster
 
   """
 
