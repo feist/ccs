@@ -33,6 +33,7 @@ def main(argv):
     removeservice = removesubservice = removeresource = False
     addquorumd = addheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
+    setlogging = addlogger = removelogger = False
     passwordset = False
 
     global password, debug, propagate, hostname, usefile, filename
@@ -43,7 +44,8 @@ def main(argv):
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
-      "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon"])
+      "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
+      "setlogging", "addlogger","removelogger"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -131,6 +133,9 @@ def main(argv):
         elif opt in ("--setrm"): setrm = True; options = args
         elif opt in ("--setcman"): setcman = True; options = args
         elif opt in ("--setfencedaemon"): setfencedaemon = True; options = args
+        elif opt in ("--setlogging"): setlogging = True; options = args
+        elif opt in ("--addlogger"): addlogger = True; options = args
+        elif opt in ("--removelogger"): removelogger = True; options = args
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf()
@@ -168,6 +173,9 @@ def main(argv):
     if (setrm): set_rm(options)
     if (setcman): set_cman(options)
     if (setfencedaemon): set_fencedaemon(options)
+    if (setlogging): set_logging(options)
+    if (addlogger): add_logger(options)
+    if (removelogger): remove_logger(options)
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -259,7 +267,12 @@ Misc Options
                         Set cman options
       --setfencedaemon [fence daemon options]
                         Set fence daemon options
-
+      --setlogging [logging options]
+                        Set logging options
+      --addlogger [logger options]
+                        Add a logger
+      --removelogger [logger options]
+                        Remove a logger
   """
 
 def stop_node():
@@ -819,6 +832,7 @@ def add_resource(type, options):
 # Removes the first resource that matches all the options
 def remove_resource(type, options):
     dom = minidom.parseString(get_cluster_conf_xml())
+    resourceMatch = False
 
     # Verify resources section exists in cluster.conf
     resources = dom.getElementsByTagName('resources')
@@ -965,6 +979,83 @@ def set_fencedaemon(options):
     while(fence_daemon.attributes.length != 0):
         fence_daemon.removeAttribute(fence_daemon.attributes.item(0).name)
     fence_daemon = set_element_attributes(fence_daemon, options)
+    set_cluster_conf(dom.toxml())
+
+def set_logging(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # If logging section is present we use it, else we create it
+    logging = dom.getElementsByTagName('logging')
+    if len(logging) == 0:
+        logging = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("logging"))
+    elif len(logging) > 1:
+        print "Error: Too many logging elements in cluster.conf"
+        sys.exit(1)
+    else:
+        logging = logging[0]
+
+    while(logging.attributes.length != 0):
+        logging.removeAttribute(logging.attributes.item(0).name)
+    logging = set_element_attributes(logging, options)
+    set_cluster_conf(dom.toxml())
+
+def add_logger(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    logging = dom.getElementsByTagName('logging')
+    if len(logging) == 0:
+        logging = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("logging"))
+    elif len(logging) > 1:
+        print "Error: Too many logging elements in cluster.conf"
+        sys.exit(1)
+    else:
+        logging = logging[0]
+
+    logger = dom.createElement("logger")
+    logger = set_element_attributes(logger, options)
+
+    logging.appendChild(logger)
+    set_cluster_conf(dom.toxml())
+
+def remove_logger(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+    loggerMatch = False
+
+    # Verify logging section exists in cluster.conf
+    logging = dom.getElementsByTagName('logging')
+    if len(logging) != 1:
+        print "Error: logging section not present or improperly formatted"
+        sys.exit(1)
+    else:
+        logging = logging[0]
+
+    logger_options = {}
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        logger_options[attr] = val
+
+    for logger in logging.childNodes:
+        if logger.nodeType == minidom.Node.TEXT_NODE:
+            continue
+        loggerMatch = False
+        for option,val in logger_options.iteritems():
+            if logger.getAttribute(option) != val:
+                loggerMatch = False
+                break
+            else:
+                loggerMatch = True
+        if loggerMatch == True:
+            break
+
+    if loggerMatch != True:
+        print "Unable to find matching logger: %s" % (options)
+        sys.exit(1)
+
+    logging.removeChild(logger)
+            
     set_cluster_conf(dom.toxml())
 
 # Sets the attributes of a specific xml element where options
