@@ -32,7 +32,7 @@ def main(argv):
     addservice = addsubservice = addresource = False
     removeservice = removesubservice = removeresource = False
     addquorumd = addheuristic = False
-    settotem = setrm = False
+    settotem = setrm = setcman = setfencedaemon = False
     passwordset = False
 
     global password, debug, propagate, hostname, usefile, filename
@@ -43,7 +43,7 @@ def main(argv):
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
-      "removeresource=", "addquorumd","addheuristic","settotem", "setrm"])
+      "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -127,8 +127,10 @@ def main(argv):
             options = args
         elif opt in ("--addquorumd"): addquorumd = True; options = args
         elif opt in ("--addheuristic"): addheuristic = True; options = args
-        elif opt in ("--settotem"): settotem = True;  options = args
-        elif opt in ("--setrm"): setrm = True;  options = args
+        elif opt in ("--settotem"): settotem = True; options = args
+        elif opt in ("--setrm"): setrm = True; options = args
+        elif opt in ("--setcman"): setcman = True; options = args
+        elif opt in ("--setfencedaemon"): setfencedaemon = True; options = args
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf()
@@ -164,6 +166,8 @@ def main(argv):
     if (addheuristic): add_heuristic(options)
     if (settotem): set_totem(options)
     if (setrm): set_rm(options)
+    if (setcman): set_cman(options)
+    if (setfencedaemon): set_fencedaemon(options)
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -247,10 +251,15 @@ Quorum Operations:
                         Add heuristics to quorumd
 
 Misc Options
-      --addtotem [totem options]
+      --settotem [totem options]
                         Set totem options
-      --addrm [resource manager options]
+      --setrm [resource manager options]
                         Set resource manager options
+      --setcman [cman options]
+                        Set cman options
+      --setfencedaemon [fence daemon options]
+                        Set fence daemon options
+
   """
 
 def stop_node():
@@ -922,6 +931,41 @@ def set_rm(options):
     rm = set_element_attributes(rm, options)
     set_cluster_conf(dom.toxml())
 
+def set_cman(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # If cman section is present we use it, else we create it
+    cman = dom.getElementsByTagName('cman')
+    if len(cman) == 0:
+        cman = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("cman"))
+    elif len(cman) > 1:
+        print "Error: Too many cman elements in cluster.conf"
+        sys.exit(1)
+    else:
+        cman = cman[0]
+
+    while(cman.attributes.length != 0):
+        cman.removeAttribute(cman.attributes.item(0).name)
+    cman = set_element_attributes(cman, options)
+    set_cluster_conf(dom.toxml())
+
+def set_fencedaemon(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # If fence_daemon section is present we use it, else we create it
+    fence_daemon = dom.getElementsByTagName('fence_daemon')
+    if len(fence_daemon) == 0:
+        fence_daemon = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("fence_daemon"))
+    elif len(fence_daemon) > 1:
+        print "Error: Too many fence_daemon elements in cluster.conf"
+        sys.exit(1)
+    else:
+        fence_daemon = fence_daemon[0]
+
+    while(fence_daemon.attributes.length != 0):
+        fence_daemon.removeAttribute(fence_daemon.attributes.item(0).name)
+    fence_daemon = set_element_attributes(fence_daemon, options)
+    set_cluster_conf(dom.toxml())
 
 # Sets the attributes of a specific xml element where options
 # is an array of strings containing attribute=value
