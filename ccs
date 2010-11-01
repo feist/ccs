@@ -199,7 +199,7 @@ Fencing Operations:
                         Add a fence method to a specific node
       --removemethod <method> <node>
                         Remove a fence method from a specific node
-      --addfencedev <device> <options>
+      --addfencedev <device> [fence device options]
                         Add fence device
       --removefencedev <fence device name>
                         Remove fence device
