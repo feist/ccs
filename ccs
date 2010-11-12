@@ -34,6 +34,7 @@ def main(argv):
     addquorumd = addheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
     setlogging = addlogger = removelogger = False
+    setmulticast = False
     passwordset = False
 
     global password, debug, propagate, hostname, usefile, filename
@@ -45,7 +46,7 @@ def main(argv):
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
       "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
-      "setlogging", "addlogger","removelogger"])
+      "setlogging", "addlogger","removelogger","setmulticast="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -136,6 +137,7 @@ def main(argv):
         elif opt in ("--setlogging"): setlogging = True; options = args
         elif opt in ("--addlogger"): addlogger = True; options = args
         elif opt in ("--removelogger"): removelogger = True; options = args
+        elif opt in ("--setmulticast"): setmulticast = True
         elif opt in ("-d"): debug = True
 
     if (getconf): get_cluster_conf()
@@ -176,6 +178,7 @@ def main(argv):
     if (setlogging): set_logging(options)
     if (addlogger): add_logger(options)
     if (removelogger): remove_logger(options)
+    if (setmulticast): set_multicast(arg)
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -265,6 +268,9 @@ Misc Options
                         Set resource manager options
       --setcman [cman options]
                         Set cman options
+      --setmulticast [multicast address]
+                        Set's the multicast address to use (or removes it
+                        if no multicast address is given)
       --setfencedaemon [fence daemon options]
                         Set fence daemon options
       --setlogging [logging options]
@@ -1057,6 +1063,31 @@ def remove_logger(options):
     logging.removeChild(logger)
             
     set_cluster_conf(dom.toxml())
+
+def set_multicast(arg):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    cman = dom.getElementsByTagName("cman")
+    if len(cman) == 0:
+        cman = dom.createElement("cman")
+        dom.getElementsByTagName("cluster")[0].appendChild(cman)
+    elif len(cman) == 1:
+        cman = cman[0]
+    else:
+        print "Error: more than one cman section is present."
+        sys.exit(1)
+
+    mc = cman.getElementsByTagName('multicast')
+    for i in mc:
+        cman.removeChild(i)
+
+    if arg != "":
+        mc = dom.createElement("multicast")
+        mc.setAttribute("addr",arg)
+        cman.appendChild(mc)
+
+    set_cluster_conf(dom.toxml())
+
 
 # Sets the attributes of a specific xml element where options
 # is an array of strings containing attribute=value
