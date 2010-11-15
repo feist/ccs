@@ -4,7 +4,15 @@ $CONFIGFILE_DIR = "conf_tests/";
 $TESTS_DIR = "tests/";
 $XMLDIFF = "./xmldiff.py";
 
-@TESTS = glob("$TESTS_DIR*.sh");
+if (@ARGV == 0) {
+  @TESTS = glob("$TESTS_DIR*.sh");
+} else {
+  @TESTS = ();
+  foreach (@ARGV) {
+    push(@TESTS,$TESTS_DIR . $_);
+    print $ARGV[0];
+  }
+}
 
 foreach $test (@TESTS) {
   $orig_config = $test;
