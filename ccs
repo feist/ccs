@@ -215,7 +215,7 @@ Fencing Operations:
                         Add a fence method to a specific node
       --removemethod <method> <node>
                         Remove a fence method from a specific node
-      --addfencedev <device> [fence device options]
+      --addfencedev <device name> [fence device options]
                         Add fence device
       --removefencedev <fence device name>
                         Remove fence device
@@ -240,7 +240,9 @@ Service Operations:
       --removeservice <servicename>
                         Removes a service and all of its subservices
       --addsubservice <servicename> <service type> [service options] ...
-                        Add individual services
+                        Add individual services if adding services within
+                        a tree, use ':' to separate elements and brackets
+                        to select elements of the same name
       --removesubservice <servicename> <service type> [subservice number]
                         Removes a specific subservice (will remove first
                                                        matching subservice
@@ -743,9 +745,13 @@ def remove_service(name):
 
     set_cluster_conf(dom.toxml())
 
+# Add a subservice checking for slashes and brackets
 def add_subservice(name, options):
     dom = minidom.parseString(get_cluster_conf_xml())
     serviceFound = False
+
+    services = options.pop(0).split('/')
+    subservice_type = services.pop(-1)
 
     # Verify top level service exists
     for service in dom.getElementsByTagName("service"):
@@ -757,7 +763,26 @@ def add_subservice(name, options):
         print "Unable to find service: %s" % name
         sys.exit(1)
 
-    subservice_type = options.pop(0)
+    for subserv in services:
+        element_number = 0
+        r = re.search(r"\[(\d+)\]$", subserv)
+        if r:
+            print "R!"
+            print subserv
+            if r.group(1):
+                print r.group(1)
+                element_number = int(r.group(1))
+        subserv = re.sub(r"\[\d+\]$", "",  subserv)
+
+
+        if (len(service.getElementsByTagName(subserv)) > 0):
+            service = service.getElementsByTagName(subserv)[element_number]
+        else:
+            print "Unable to find service %s" % "/".join(services)
+            sys.exit(1)
+
+
+#    subservice_type = options.pop(0)
     subservice = service.appendChild(dom.createElement(subservice_type))
     subservice = set_element_attributes(subservice, options)
 
