@@ -442,7 +442,8 @@ def empty_cluster_conf(name="cluster"):
 
 def create_cluster(clustername):
     xml = empty_cluster_conf(clustername)
-    set_cluster_conf(xml)
+    # No need to increment on cluster.conf creation
+    set_cluster_conf(xml, False)
 
 def add_method(method, options):
     method_found = False
