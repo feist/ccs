@@ -179,6 +179,7 @@ def main(argv):
     if (addlogger): add_logger(options)
     if (removelogger): remove_logger(options)
     if (setmulticast): set_multicast(arg)
+    if (sync): sync_cluster_conf()
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -190,7 +191,7 @@ Remotely control cluster infrastructure.
   -p, --password        Root password for node running ricci
       --getconf         Print current cluster.conf file
       --status          Print current cluster status
-      --sync		Sync config file to all nodes (asking for passwords
+      --sync            Sync config file to all nodes (asking for passwords
                         as necessary)
 
 Cluster Operations:
@@ -302,6 +303,17 @@ def get_cluster_status():
     xml = send_ricci_command("cluster","status")
     xml = minidom.parseString(xml).getElementsByTagName('cluster')[0].toprettyxml(indent='  ',newl='')
     print xml
+
+def sync_cluster_conf():
+    global hostname
+    xml = get_cluster_conf_xml()
+    dom = minidom.parseString(xml).getElementsByTagName('cluster')[0]
+    xml = dom.toprettyxml(indent='  ',newl='')
+    dom = minidom.parseString(xml)
+    for node in dom.getElementsByTagName('clusternode'):
+        nodename = node.getAttribute("name")
+        hostname = nodename
+        set_cluster_conf(xml)
 
 def list_nodes():
     xml = get_cluster_conf_xml()
@@ -1130,7 +1142,6 @@ def set_element_attributes(element, options):
     return element
 
 # Set the cluster.conf file and increment the version
-# If global variable sync is true, sync config to all nodes
 def set_cluster_conf(xml, increment = True):
     dom = minidom.parseString(xml)
 
