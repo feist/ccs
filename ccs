@@ -1151,11 +1151,7 @@ def set_cluster_conf(xml, increment = True):
         f.write(xml)
         f.close()
     else:
-        if sync:
-          log_msg (send_ricci_command("cluster", "set_cluster.conf", ("propagate", "boolean", "true"),("cluster.conf","xml","",xml)))
-        else:
-          log_msg (send_ricci_command("cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
-
+        log_msg (send_ricci_command("cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
 
 def verify_authentication(dom):
     ricci =  dom.getElementsByTagName("ricci")
