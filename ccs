@@ -13,7 +13,7 @@ CLUSTERRNG = "cluster.rng.in"
 
 password = None
 debug = False
-propagate = False
+sync = False
 usefile = False
 hostname = "localhost"
 filename = ""
@@ -37,16 +37,16 @@ def main(argv):
     setmulticast = False
     passwordset = False
 
-    global password, debug, propagate, hostname, usefile, filename
+    global password, debug, sync, hostname, usefile, filename
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
-        opts, args = getopt.getopt(argv, "dh:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
+        opts, args = getopt.getopt(argv, "dsh:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
       "lsservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
-      "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "propagate", "addfailoverdomain=",
+      "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "sync", "addfailoverdomain=",
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
       "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
-      "setlogging", "addlogger","removelogger","setmulticast="])
+      "setlogging", "addlogger","removelogger","setmulticast=","sync"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -73,7 +73,7 @@ def main(argv):
         elif opt in ("--getversion"): getversion = True
         elif opt in ("--setversion"): setversion = True ; version = arg 
         elif opt in ("--incversion"): incrementversion = True
-        elif opt in ("--propagate"): propagate = True
+        elif opt in ("--sync"): sync = True
         elif opt in ("--createcluster"):
             createcluster = True
             clustername = arg
@@ -190,6 +190,8 @@ Remotely control cluster infrastructure.
   -p, --password        Root password for node running ricci
       --getconf         Print current cluster.conf file
       --status          Print current cluster status
+      --sync		Sync config file to all nodes (asking for passwords
+                        as necessary)
 
 Cluster Operations:
       --createcluster <cluster>
@@ -1128,7 +1130,7 @@ def set_element_attributes(element, options):
     return element
 
 # Set the cluster.conf file and increment the version
-# If global variable propagate is true, propagate to entire cluster
+# If global variable sync is true, sync config to all nodes
 def set_cluster_conf(xml, increment = True):
     dom = minidom.parseString(xml)
 
@@ -1149,11 +1151,21 @@ def set_cluster_conf(xml, increment = True):
         f.write(xml)
         f.close()
     else:
-        if propagate:
-          log_msg (send_ricci_command("cluster", "set_cluster.conf", ("cluster.conf","xml","",xml), ("propagate", "boolean", "true")))
+        if sync:
+          log_msg (send_ricci_command("cluster", "set_cluster.conf", ("propagate", "boolean", "true"),("cluster.conf","xml","",xml)))
         else:
           log_msg (send_ricci_command("cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
 
+
+def verify_authentication(dom):
+    ricci =  dom.getElementsByTagName("ricci")
+    if len(ricci) > 0:
+        if ricci[0].getAttribute("authenticated") != "true":
+            return False
+        else:
+            return True
+    print "Error: no ricci tag in ricci response"
+    sys.exit(1)
 
 def send_ricci_command(module, command, *vars):
     variables = ""
@@ -1169,14 +1181,16 @@ def send_ricci_command(module, command, *vars):
         msg = '<ricci function="authenticate" password="%s" version="1.0"/>' % password
         res = send_to_ricci(msg)     
         dom = minidom.parseString(res[1])
-        ricci_elem = dom.getElementsByTagName('ricci')
-        if (ricci_elem[0].getAttribute("authenticated") != "true"): 
-            print "Unable to authenticate with ricci node, please check root password."
+        if (not verify_authentication(dom)):
+            print "Unable to authenticate with ricci node, please check password."
             sys.exit(1)
     
     msg = '<ricci function="process_batch" async="false" version="1.0"><batch><module name="%s"><request API_version="1.0"><function_call name="%s">%s</function_call></request></module></batch></ricci>' % (module,command,variables)
     res = send_to_ricci(msg)
     dom = minidom.parseString(res[1].replace('\t',''))
+    if (not verify_authentication(dom)):
+        print "Error: Not yet authenticated with %s (try -p option)" % hostname
+        sys.exit(1)
     xml = dom.getElementsByTagName('function_response')[0].toxml()
     return xml 
 
