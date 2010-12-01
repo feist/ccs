@@ -62,7 +62,6 @@ def main(argv):
         elif opt in ("--password", "-p"): passwordset = True ; password = arg
         elif opt in ("--getconf"): getconf = True
         elif opt in ("--status"): status = True
-        elif opt in ("--fence"): fence = True ;  node = arg
         elif opt in ("--start"): start = True
         elif opt in ("--stop"): stop = True
         elif opt in ("--lsnodes"): listnodes = True
@@ -226,7 +225,6 @@ Fencing Operations:
       --removefenceinst <fence device name> <node> <method>
                         Remove all instances of the fence device listed from
                         the given method and node
-      --fence <node>    Fence the node <node>
 
 Failover Domain Operations:
       --addfailoverdomain <name> [restricted] [ordered] [nofailback]
