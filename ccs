@@ -191,8 +191,7 @@ Remotely control cluster infrastructure.
   -p, --password        Root password for node running ricci
       --getconf         Print current cluster.conf file
       --status          Print current cluster status
-      --sync            Sync config file to all nodes (asking for passwords
-                        as necessary)
+      --sync            Sync config file to all nodes
 
 Cluster Operations:
       --createcluster <cluster>
