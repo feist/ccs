@@ -197,7 +197,7 @@ Cluster Operations:
       --createcluster <cluster>
                         Create a new cluster.conf
       --getversion      Get the current cluster.conf version
-      --setversion      Set the cluster.conf version
+      --setversion <n>  Set the cluster.conf version
       --incversion      Increment the cluster.conf version by 1
                         scp and put them in the current directory
       --start           Start cluster services on host
