@@ -29,6 +29,7 @@ def main(argv):
     addfenceinst = removefenceinst = False
     lsfencedev = lsfenceinst = False
     addfailoverdomain = removefailoverdomain = False
+    addfailoverdomainnode = removefailoverdomainnode = False
     addservice = addsubservice = addresource = False
     removeservice = removesubservice = removeresource = False
     addquorumd = addheuristic = False
@@ -46,7 +47,8 @@ def main(argv):
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "sync", "addfailoverdomain=",
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
       "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
-      "setlogging", "addlogger","removelogger","setmulticast=","sync"])
+      "setlogging", "addlogger","removelogger","setmulticast=","sync","addfailoverdomainnode=",
+      "removefailoverdomainnode="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -104,6 +106,14 @@ def main(argv):
             name = arg
             options = args
         elif opt in ("--removefailoverdomain"): removefailoverdomain = True; name = arg
+        elif opt in ("--addfailoverdomainnode"):
+            addfailoverdomainnode = True
+            name = arg
+            options = args
+        elif opt in ("--removefailoverdomainnode"):
+            removefailoverdomainnode = True
+            name = arg
+            options = args
         elif opt in ("--addservice"):
             addservice = True
             name = arg
@@ -162,6 +172,8 @@ def main(argv):
     if (lsfenceinst): ls_fenceinst(arg)
     if (addfailoverdomain): add_failoverdomain(name, options)
     if (removefailoverdomain): remove_failoverdomain(name)
+    if (addfailoverdomainnode): add_failoverdomainnode(name, options)
+    if (removefailoverdomainnode): remove_failoverdomainnode(name, options)
     if (addservice): add_service(name, options)
     if (removeservice): remove_service(name)
     if (addsubservice): add_subservice(name, options)
@@ -233,6 +245,8 @@ Failover Domain Operations:
                         Remove failover domain
       --addfailoverdomainnode <failover domain> <node> [priority=xx]
                         Add node to given failover domain
+      --removefailoverdomainnode <failover domain> <node>
+                        Remove node from failover domain
 
 Service Operations:
       --addservice <servicename> [service options] ...
@@ -693,6 +707,81 @@ def remove_failoverdomain(name):
     print "Unable to find failover domain '%s' in cluster.conf file." % (name)
     sys.exit(1)
     
+# Add's a failoverdomainnode entry under a failoverdomain with 'name' and
+# a node in options[0] if a failoverdomainnode already exists it is overwritten
+def add_failoverdomainnode(name, options):
+    if len(options) == 0:
+        usage()
+        sys.exit(2)
+
+    node = options[0]
+    if len(options) >= 2:
+        if not options[1].isdigit():
+            print "Priority must be an integer between 1 and 100"
+            sys.exit(2)
+
+        priority = int(options[1])
+        if priority < 1 or priority > 100:
+            print "Priority must be between 1 and 100"
+            sys.exit(2)
+    else:
+        priority = -1 
+
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    
+    failoverdomains_array = dom.getElementsByTagName("failoverdomains")
+
+    if len(failoverdomains_array) > 0:
+        failoverdomains = failoverdomains_array[0]
+    else:
+        print "No failoverdomains section is present, add a failover domain first."
+        sys.exit(1)
+
+    for failoverdomain in failoverdomains.getElementsByTagName("failoverdomain"):
+        if failoverdomain.getAttribute("name") == name:
+            for failoverdomainnode in failoverdomain.getElementsByTagName("failoverdomainnode"):
+                if failoverdomainnode.getAttribute("name") == node:
+                    failoverdomain.removeChild(failoverdomainnode)
+            failoverdomain = failoverdomain.appendChild(dom.createElement("failoverdomainnode"))
+            failoverdomain.setAttribute("name",node)
+            if priority != -1:
+                failoverdomain.setAttribute("priority",str(priority))
+            set_cluster_conf(dom.toxml())
+            return
+
+    print "Unable to find failoverdomain '%s'" % (name)
+    sys.exit(1)
+
+
+
+def remove_failoverdomainnode(name, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    if len(options) != 1:
+        usage()
+        sys.exit(2)
+
+    node = options[0]
+
+    failoverdomains = dom.getElementsByTagName("failoverdomains")
+    if len(failoverdomains) > 0:
+        for failoverdomain in failoverdomains[0].getElementsByTagName("failoverdomain"):
+            if failoverdomain.getAttribute("name") == name:
+                for failoverdomainnode in failoverdomain.getElementsByTagName("failoverdomainnode"):
+                    if failoverdomainnode.getAttribute("name") == node:
+                        failoverdomain.removeChild(failoverdomainnode)
+                        set_cluster_conf(dom.toxml())
+                        return
+    else:
+        print "No failoverdomains section found in cluster.conf"
+        sys.exit(1)
+
+    print "Unable to find node '%s' in failover domain '%s'." % (node, name)
+    sys.exit(1)
+
+
+
 def ls_fencedev():
     rng = open(CLUSTERRNG)
     dom = minidom.parseString(rng.read())
