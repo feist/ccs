@@ -881,7 +881,7 @@ def add_subservice(name, options):
     dom = minidom.parseString(get_cluster_conf_xml())
     serviceFound = False
 
-    services = options.pop(0).split('/')
+    services = options.pop(0).split(':')
     subservice_type = services.pop(-1)
 
     # Verify top level service exists
