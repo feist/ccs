@@ -215,7 +215,8 @@ Remotely control cluster infrastructure.
 
 Cluster Operations:
       --createcluster <cluster>
-                        Create a new cluster.conf
+                        Create a new cluster.conf (removing old one if it
+                                                   exists)
       --getversion      Get the current cluster.conf version
       --setversion <n>  Set the cluster.conf version
       --incversion      Increment the cluster.conf version by 1
