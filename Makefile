@@ -12,3 +12,6 @@ tarball:
 
 install:
 	install ccs ${DESTDIR}/${SBINDIR}/ccs
+
+test:
+	cd unit_tests; ./unittest.pl
