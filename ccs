@@ -15,8 +15,8 @@ password = None
 debug = False
 sync = False
 usefile = False
-hostname = "localhost"
-filename = ""
+hostname = False
+filename = False
 
 def main(argv):
     getconf = False
@@ -35,8 +35,10 @@ def main(argv):
     addquorumd = addheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
     setlogging = addlogger = removelogger = False
+    setdlm = False
     setmulticast = False
     passwordset = False
+    nodeid = votes = False
 
     global password, debug, sync, hostname, usefile, filename
 #    logging.basicConfig(level=logging.DEBUGRemove
@@ -47,8 +49,8 @@ def main(argv):
       "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "sync", "addfailoverdomain=",
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
       "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
-      "setlogging", "addlogger","removelogger","setmulticast=","sync","addfailoverdomainnode=",
-      "removefailoverdomainnode="])
+      "setlogging", "addlogger","removelogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
+      "votes=", "removefailoverdomainnode=", "setdlm"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -142,12 +144,19 @@ def main(argv):
         elif opt in ("--settotem"): settotem = True; options = args
         elif opt in ("--setrm"): setrm = True; options = args
         elif opt in ("--setcman"): setcman = True; options = args
+        elif opt in ("--setdlm"): setdlm = True; options = args
         elif opt in ("--setfencedaemon"): setfencedaemon = True; options = args
         elif opt in ("--setlogging"): setlogging = True; options = args
         elif opt in ("--addlogger"): addlogger = True; options = args
         elif opt in ("--removelogger"): removelogger = True; options = args
         elif opt in ("--setmulticast"): setmulticast = True
+        elif opt in ("--nodeid"): nodeid = arg
+        elif opt in ("--votes"): votes = arg
         elif opt in ("-d"): debug = True
+
+    if not hostname and not filename:
+        print "Must specify a hostname or filename."
+        sys.exit(2)
 
     if (getconf): get_cluster_conf()
     if (status): get_cluster_status()
@@ -156,7 +165,7 @@ def main(argv):
     if (listnodes): list_nodes()
     if (listservices): list_services()
     if (listdomains): list_domains()
-    if (addnode): add_node(node)
+    if (addnode): add_node(node, nodeid, votes)
     if (removenode): remove_node(node)
     if (getversion): print get_version()
     if (setversion): set_version(version)
@@ -185,6 +194,7 @@ def main(argv):
     if (settotem): set_totem(options)
     if (setrm): set_rm(options)
     if (setcman): set_cman(options)
+    if (setdlm): set_dlm(options)
     if (setfencedaemon): set_fencedaemon(options)
     if (setlogging): set_logging(options)
     if (addlogger): add_logger(options)
@@ -201,7 +211,6 @@ Remotely control cluster infrastructure.
   -f, --file [file]     Read from file 
   -p, --password        Root password for node running ricci
       --getconf         Print current cluster.conf file
-      --status          Print current cluster status
       --sync            Sync config file to all nodes
 
 Cluster Operations:
@@ -219,6 +228,8 @@ Node Operations:
       --addnode <node>  Add node <node> to the cluster
       --removenode <node>
                         Remove a node from the cluster
+      --nodeid <nodeid> Specify nodeid when adding a node
+      --votes <votes>   Specify number of votes for a node
 
 Fencing Operations:
       --lsfencedev      Lists available fence devices and their options
@@ -280,6 +291,8 @@ Quorum Operations:
 Misc Options
       --settotem [totem options]
                         Set totem options
+      --setdlm [dlm options]
+                        Set dlm options
       --setrm [resource manager options]
                         Set resource manager options
       --setcman [cman options]
@@ -369,26 +382,38 @@ def list_domains():
 # Add a node to the cluster.conf
 #   Before adding a node we need to verify another node
 #   with the same name doesn't already exist
-def add_node(node_to_add):
+def add_node(node_to_add,nodeid,votes):
     nodeid_list = set()
+
+    if nodeid and nodeid.isdigit(): nodeid = int(nodeid)
+    else: nodeid = False
+
+    if votes and votes.isdigit(): votes = int(votes)
+    else: votes = False
 
     dom = minidom.parseString(get_cluster_conf_xml())
     for node in dom.getElementsByTagName('clusternode'):
         if (node.getAttribute("name") == node_to_add):
             print "Node '%s' already exists in cluster.conf" % node_to_add
             sys.exit(1)
-        nodeid_list.update(node.getAttribute("nodeid"))
+        if nodeid and (node.getAttribute("nodeid") == str(nodeid)):
+            print "Nodeid '%d' already exists in cluster.conf" % nodeid
+            sys.exit(1)
+        nodeid_list.add(node.getAttribute("nodeid"))
     node = dom.createElement("clusternode")
     node.setAttribute("name",node_to_add)
 
     # Use the first nodeid above 0 that isn't already used
-    nodeid = 0
-    while (True):
-        nodeid = nodeid + 1
-        if (str(nodeid) not in nodeid_list): break
+    if nodeid == False:
+        nodeid = 0
+        while (True):
+            nodeid = nodeid + 1
+            print nodeid
+            print nodeid_list
+            if (str(nodeid) not in nodeid_list): break
 
     node.setAttribute("nodeid",str(nodeid))
-    node.setAttribute("votes","1")
+    if votes: node.setAttribute("votes",str(votes))
     dom.getElementsByTagName("clusternodes")[0].appendChild(node)
     set_cluster_conf(dom.toxml())
     print "Node %s added." % (node_to_add)
@@ -1093,6 +1118,24 @@ def set_cman(options):
     while(cman.attributes.length != 0):
         cman.removeAttribute(cman.attributes.item(0).name)
     cman = set_element_attributes(cman, options)
+    set_cluster_conf(dom.toxml())
+
+def set_dlm(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # If dlm section is present we use it, else we create it
+    dlm = dom.getElementsByTagName('dlm')
+    if len(dlm) == 0:
+        dlm = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("dlm"))
+    elif len(dlm) > 1:
+        print "Error: Too many dlm elements in cluster.conf"
+        sys.exit(1)
+    else:
+        dlm = dlm[0]
+
+    while(dlm.attributes.length != 0):
+        dlm.removeAttribute(dlm.attributes.item(0).name)
+    dlm = set_element_attributes(dlm, options)
     set_cluster_conf(dom.toxml())
 
 def set_fencedaemon(options):
