@@ -265,21 +265,20 @@ Service Operations:
                         Add service to cluster
       --removeservice <servicename>
                         Removes a service and all of its subservices
-      --addsubservice <servicename> <service type> [service options] ...
-                        Add individual services if adding services within
-                        a tree, use ':' to separate elements and brackets
-                        to select elements of the same name
-      --removesubservice <servicename> <service type> [subservice number]
-                        Removes a specific subservice (will remove first
-                                                       matching subservice
-                                                       unless subservice
-                                                       number is given)
+      --addsubservice <servicename> <subservice> [service options] ...
+                        Add individual sub services, if adding services within
+                        a tree, use ':' to separate elements and brackets to
+                        identify subservices of the same type
+                        Example: --addsubservice service_a nfs[1]:nfs[2]:nfs
+      --removesubservice <servicename> <subservice>
+                        Removes a specific subservice specified by the
+                        subservice, using ':' to separate elements and
+                        brackets to identify between subservices of the
+                        same type.
       --addresource <resource type> [resource options] ...
                         Add resources to the cluster
-      --removeresource <resource type> [resource number]
-                        Remove specified resource (will remove first matching
-                                                   resource unless resource
-                                                   number is given)
+      --removeresource <resource type> [resource options]
+                        Remove specified resource with resource options
       --lsservices      List currently configured services and resources in
                         the cluster
 
@@ -898,61 +897,72 @@ def add_subservice(name, options):
         element_number = 0
         r = re.search(r"\[(\d+)\]$", subserv)
         if r:
-            print "R!"
-            print subserv
             if r.group(1):
-                print r.group(1)
                 element_number = int(r.group(1))
         subserv = re.sub(r"\[\d+\]$", "",  subserv)
 
 
-        if (len(service.getElementsByTagName(subserv)) > 0):
-            service = service.getElementsByTagName(subserv)[element_number]
-        else:
+        count = 0
+        subserviceFound = False
+        for e in service.childNodes:
+            if e.nodeType != e.ELEMENT_NODE:
+                continue
+            if e.tagName == subserv:
+                if count == element_number:
+                    service = e
+                    subserviceFound = True
+                    break
+                else: count = count + 1
+        if subserviceFound == False:
             print "Unable to find service %s" % "/".join(services)
             sys.exit(1)
 
-
-#    subservice_type = options.pop(0)
     subservice = service.appendChild(dom.createElement(subservice_type))
     subservice = set_element_attributes(subservice, options)
 
     set_cluster_conf(dom.toxml())
 
 def remove_subservice(name, options):
-    subserviceRemoved = False
-    subservice_type = options[0]
-    if len(options) > 1:
-        subservice_count = int(options[1])
-    else:
-        subservice_count = 1
-
     dom = minidom.parseString(get_cluster_conf_xml())
+    serviceFound = False
 
-    rm = dom.getElementsByTagName("rm")
-    if len(rm) > 0:
-        rm = rm[0]
-        services = rm.getElementsByTagName("service")
-        for service in services:
-            if service.getAttribute("name") == name:
-                for subservice in service.childNodes:
-                    if subservice.nodeType == minidom.Node.TEXT_NODE:
-                        continue
-                    if subservice.tagName == subservice_type:
-                        if subservice_count == 1:
-                            service.removeChild(subservice)
-                            subserviceRemoved = True
-                            break
-                        else: subservice_count = subservice_count - 1
-                break
-    else:
-        print "No <rm> section in cluster.conf"
+    services = options.pop(0).split(':')
+
+    # Verify that the service exists
+    for service in dom.getElementsByTagName("service"):
+        if service.getAttribute("name") == name:
+            serviceFound = True
+            break;
+
+    if serviceFound == False:
+        print "Unable to find service: %s" % name
         sys.exit(1)
 
-    if subserviceRemoved == False:
-        print "Unable to find subservice type: %s" % name
-        sys.exit(1)
+    for subserv in services:
+        element_number = 0
+        r = re.search(r"\[(\d+)\]$", subserv)
+        if r:
+            if r.group(1):
+                element_number = int(r.group(1))
+        subserv = re.sub(r"\[\d+\]$", "",  subserv)
 
+
+        count = 0
+        subserviceFound = False
+        for e in service.childNodes:
+            if e.nodeType != e.ELEMENT_NODE:
+                continue
+            if e.tagName == subserv:
+                if count == element_number:
+                    service = e
+                    subserviceFound = True
+                    break
+                else: count = count + 1
+        if subserviceFound == False:
+            print "Unable to find service %s" % "/".join(services)
+            sys.exit(1)
+
+    service.parentNode.removeChild(service)
     set_cluster_conf(dom.toxml())
 
 def add_resource(type, options):
