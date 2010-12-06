@@ -1,0 +1,48 @@
+<cluster config_version="36" name="mycluster">
+  <fence_daemon post_fail_delay="0" post_join_delay="3"/>
+  <clusternodes>
+    <clusternode name="node1" nodeid="1"/>
+    <clusternode name="node2" nodeid="2"/>
+  </clusternodes>
+  <cman/>
+  <fencedevices/>
+  <rm>
+    <failoverdomains/>
+    <resources>
+      <restype1 a="b" b="1"/>
+      <restype2 a="b" b="2"/>
+      <restype3 a="b" b="4"/>
+      <restype3 a="b" b="6"/>
+    </resources>
+    <service name="service1">
+      <nfs a="b" c="1"/>
+    </service>
+    <service a="b" c="d" name="service2">
+      <nfs a="b" c="2">
+        <nfs a="b" c="3">
+          <nfs a="b" c="5"/>
+          <nfs a="b" c="14">
+            <nfs a="b" c="15"/>
+          </nfs>
+        </nfs>
+        <nfs a="b" c="4">
+          <nfs a="b" c="6">
+            <nfs a="b" c="8"/>
+            <nfs a="b" c="9">
+              <deep a="b" c="11"/>
+            </nfs>
+          </nfs>
+          <nfs a="b" c="6.1">
+            <nfs a="b" c="10"/>
+            <nfs a="b" c="13"/>
+          </nfs>
+        </nfs>
+      </nfs>
+      <nfs a="b" c="7">
+        <nfs a="b" c="16"/>
+      </nfs>
+      <nfs a="b" c="7">
+      </nfs>
+    </service>
+  </rm>
+</cluster>
