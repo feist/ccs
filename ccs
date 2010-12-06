@@ -32,7 +32,7 @@ def main(argv):
     addfailoverdomainnode = removefailoverdomainnode = False
     addservice = addsubservice = addresource = False
     removeservice = removesubservice = removeresource = False
-    addquorumd = addheuristic = False
+    addquorumd = addheuristic = removeheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
     setlogging = addlogger = removelogger = False
     setdlm = False
@@ -50,7 +50,7 @@ def main(argv):
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
       "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
       "setlogging", "addlogger","removelogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "removefailoverdomainnode=", "setdlm"])
+      "votes=", "removefailoverdomainnode=", "setdlm", "removeheuristic"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -141,6 +141,7 @@ def main(argv):
             options = args
         elif opt in ("--addquorumd"): addquorumd = True; options = args
         elif opt in ("--addheuristic"): addheuristic = True; options = args
+        elif opt in ("--removeheuristic"): removeheuristic = True; options = args
         elif opt in ("--settotem"): settotem = True; options = args
         elif opt in ("--setrm"): setrm = True; options = args
         elif opt in ("--setcman"): setcman = True; options = args
@@ -191,6 +192,7 @@ def main(argv):
     if (removeresource): remove_resource(name, options)
     if (addquorumd): add_quorumd(options)
     if (addheuristic): add_heuristic(options)
+    if (removeheuristic): remove_heuristic(options)
     if (settotem): set_totem(options)
     if (setrm): set_rm(options)
     if (setcman): set_cman(options)
@@ -287,6 +289,8 @@ Quorum Operations:
                         Add quorumd options
       --addheuristic [heuristic options] ...
                         Add heuristics to quorumd
+      --removeheuristic [heuristic options] ...
+                        Remove heuristic specified by heurstic options
 
 Misc Options
       --settotem [totem options]
@@ -1078,6 +1082,46 @@ def add_heuristic(options):
     heuristic = set_element_attributes(heuristic, options)
 
     quorumd.appendChild(heuristic)
+    set_cluster_conf(dom.toxml())
+
+def remove_heuristic(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # If quorumd section is present we use it, else we create an empty one
+    quorumd = dom.getElementsByTagName('quorumd')
+    if len(quorumd) == 0:
+        print "Error: no quorumd section in cluster.conf"
+        sys.exit(1)
+    elif len(quorumd) > 1:
+        print "Error: Too many quorumd elements in cluster.conf"
+        sys.exit(1)
+    else:
+        quorumd = quorumd[0]
+
+    heuristic_options = {}
+    for option in options:
+        (attr, sep, val) = option.partition('=')
+        if (sep == ""):
+            print "Invalid option: %s" % option
+            sys.exit(1)
+        heuristic_options[attr] = val
+
+    for hueristic in dom.getElementsByTagName('heuristic'):
+        for option,val in heuristic_options.iteritems():
+            if hueristic.getAttribute(option) != val:
+                hueristicMatch = False
+                break
+            else:
+                hueristicMatch = True
+        if hueristicMatch == True:
+            break
+
+    if hueristicMatch != True:
+        print "Unable to find matching hueristic: %s, %s" % (type,options)
+        sys.exit(1)
+
+    quorumd.removeChild(hueristic)
+            
     set_cluster_conf(dom.toxml())
 
 def set_totem(options):
