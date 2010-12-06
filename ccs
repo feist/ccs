@@ -449,9 +449,13 @@ def increment_version():
 
 def get_cluster_conf_xml():
     if usefile:
-        f = open(filename, 'r')
-        xml = f.read()
-        f.close()
+        try:
+            f = open(filename, 'r')
+            xml = f.read()
+            f.close()
+        except IOError:
+            print "Unable to open file: %s" % filename
+            sys.exit(1)
     else:
         xml = send_ricci_command("cluster", "get_cluster.conf")
 
