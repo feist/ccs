@@ -1,7 +1,7 @@
 # Basic makefile for creating tarball or installing ccs
 #
 
-VERSION=0.1.0
+VERSION=0.1.1
 SBINDIR=/usr/sbin/
 DESTDIR=
 

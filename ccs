@@ -7,6 +7,9 @@ import logging
 import os
 import os.path
 import re
+import threading
+import time, random
+from Queue import Queue
 
 RICCI_PORT = 11111
 CLUSTERRNG = "cluster.rng.in"
@@ -18,9 +21,36 @@ usefile = False
 hostname = False
 filename = False
 
+class StopNodeThread (threading.Thread):
+    def __init__ (self, host):
+        self.host = host
+        threading.Thread.__init__(self)
+
+    def getoutput(self):
+        return self.output
+
+    def run (self):
+        self.output = stop_node(self.host,True)
+        if self.output == 0:
+            self.output = "Stopped %s" % self.host
+
+class StartNodeThread (threading.Thread):
+    def __init__ (self, host):
+        self.host = host
+        threading.Thread.__init__(self)
+        self.output = ""
+
+    def getoutput(self):
+        return self.output
+
+    def run (self):
+        self.output = start_node(self.host,True)
+        if self.output == 0:
+            self.output = "Started %s" % self.host
+
 def main(argv):
     getconf = False
-    status = start = stop = False
+    status = start = stop = startall = stopall = False
     listnodes = listservices = listdomains = False
     addnode = removenode = getversion = False
     incrementversion = setversion = False
@@ -35,8 +65,7 @@ def main(argv):
     addquorumd = addheuristic = removeheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
     setlogging = addlogger = removelogger = False
-    setdlm = False
-    setmulticast = False
+    setdlm = setmulticast = False
     passwordset = False
     nodeid = votes = False
 
@@ -50,7 +79,7 @@ def main(argv):
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
       "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
       "setlogging", "addlogger","removelogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "removefailoverdomainnode=", "setdlm", "removeheuristic"])
+      "votes=", "removefailoverdomainnode=", "setdlm", "removeheuristic", "startall", "stopall"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -68,6 +97,8 @@ def main(argv):
         elif opt in ("--status"): status = True
         elif opt in ("--start"): start = True
         elif opt in ("--stop"): stop = True
+        elif opt in ("--startall"): startall = True
+        elif opt in ("--stopall"): stopall = True
         elif opt in ("--lsnodes"): listnodes = True
         elif opt in ("--lsservices"): listservices = True
         elif opt in ("--listdomains"): listdomains = True
@@ -161,8 +192,10 @@ def main(argv):
 
     if (getconf): get_cluster_conf()
     if (status): get_cluster_status()
-    if (stop): stop_node() 
-    if (start): start_node()
+    if (stop): stop_node(hostname) 
+    if (start): start_node(hostname)
+    if (startall): start_all()
+    if (stopall): stop_all()
     if (listnodes): list_nodes()
     if (listservices): list_services()
     if (listdomains): list_domains()
@@ -209,9 +242,9 @@ def usage():
 Remotely control cluster infrastructure.
 
   -h, --help            Display this help and exit
-  -h, --host [host]     Ricci host to connect to (defaults to localhost)
-  -f, --file [file]     Read from file 
-  -p, --password        Root password for node running ricci
+  -h, --host [host]     Cluster node to perform actions on
+  -f, --file [file]     File to perform actions on
+  -p, --password        Ricci user password for node running ricci
       --getconf         Print current cluster.conf file
       --sync            Sync config file to all nodes
 
@@ -223,8 +256,10 @@ Cluster Operations:
       --setversion <n>  Set the cluster.conf version
       --incversion      Increment the cluster.conf version by 1
                         scp and put them in the current directory
-      --start           Start cluster services on host
-      --stop            Stop cluster services on host
+      --startall        Start cluster services on all nodes
+      --stopall         Stop cluster services on all nodes
+      --start           Start cluster services on host specified with -h
+      --stop            Stop cluster services on host specified with -h
 
 Node Operations:
       --lsnodes         List all nodes in the cluster
@@ -235,7 +270,6 @@ Node Operations:
       --votes <votes>   Specify number of votes for a node
 
 Fencing Operations:
-      --lsfencedev      Lists available fence devices and their options
       --lsfenceinst <fence device>
                         Lists available fence instances options for given
       --addmethod <method> <node>
@@ -314,14 +348,104 @@ Misc Options
                         Remove a logger
   """
 
-def stop_node():
-    xml = send_ricci_command("cluster", "stop_node")
-    print xml
+def stop_node(node, inthread=False):
+    xml = send_ricci_command("cluster", "stop_node", node)
+
+    dom = minidom.parseString(xml)
+    vars = dom.getElementsByTagName('var')
+    for var in vars:
+        if var.getAttribute("name") != "success":
+            continue
+        if not var.hasAttribute("value"):
+            if inthread:
+                return "Unable to get valid response from ricci for %s." % node
+            else:
+                print "Unable to get valid response from ricci for %s." % node
+                sys.exit(1)
+        if var.getAttribute("value") == "false":
+            if inthread:
+                return "Unable to stop %s."
+            else:
+                print "Unable to stop %s."
+                sys.exit(1)
+
+        # If it succeeds print nothing and return 0
+        if var.getAttribute("value") == "true":
+            return 0
+
+    if inthread:
+        return "Unable to get valid response from ricci for %s." % node
+    else:
+        print "Unable to get valid response from ricci for %s." % node
+        sys.exit(1)
     
-def start_node():
-    xml = send_ricci_command("cluster", "start_node")
-    print xml
-    
+def start_node(node, inthread=False):
+    xml = send_ricci_command("cluster", "start_node", node)
+
+    dom = minidom.parseString(xml)
+    vars = dom.getElementsByTagName('var')
+    for var in vars:
+        if var.getAttribute("name") != "success":
+            continue
+
+        if not var.hasAttribute("value"):
+            if inthread:
+                return "Unable to get valid response from ricci for %s." % node
+            else:
+                print "Unable to get valid response from ricci for %s." % node
+                sys.exit(1)
+
+        if var.getAttribute("value") == "false":
+            if inthread:
+                return "Unable to start %s, possibly do to lack of quorum, try --startall" % node
+            else:
+                print "Unable to start %s, possibly do to lack of quorum, try --startall" % node
+                sys.exit(1)
+
+        # If it succeeds print nothing and return 0
+        if var.getAttribute("value") == "true":
+            return 0
+
+    if inthread:
+        return "Unable to get valid response from ricci for %s." % node
+    else:
+        print "Unable to get valid response from ricci for %s." % node
+        sys.exit(1)
+
+def start_all(nodelist = None):
+    if nodelist == None:
+        nodelist = get_nodelist()
+    threads = {}
+
+    for node in nodelist:
+        threads[node] = StartNodeThread(node)
+        threads[node].start()
+
+    for thread in threads.values():
+        thread.join()
+        print thread.getoutput()
+
+def stop_all(nodelist = None):
+    if nodelist == None:
+        nodelist = get_nodelist()
+    threads = {}
+
+    for node in nodelist:
+        threads[node] = StopNodeThread(node)
+        threads[node].start()
+
+    for thread in threads.values():
+        thread.join()
+        print thread.getoutput()
+
+def get_nodelist():
+    xml = get_cluster_conf_xml()
+    dom = minidom.parseString(xml)
+    nodelist = []
+    for node in dom.getElementsByTagName('clusternode'):
+        nodelist.append(node.getAttribute("name"))
+    return nodelist
+
 def get_cluster_conf():
     xml = get_cluster_conf_xml()
     xml = minidom.parseString(xml).getElementsByTagName('cluster')[0].toprettyxml(indent='  ',newl='')
@@ -1348,7 +1472,7 @@ def set_cluster_conf(xml, increment = True):
         f.write(xml)
         f.close()
     else:
-        log_msg (send_ricci_command("cluster", "set_cluster.conf", ("cluster.conf","xml","",xml)))
+        log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("cluster.conf","xml","",xml)))
 
 def verify_authentication(dom):
     ricci =  dom.getElementsByTagName("ricci")
@@ -1360,8 +1484,11 @@ def verify_authentication(dom):
     print "Error: no ricci tag in ricci response"
     sys.exit(1)
 
-def send_ricci_command(module, command, *vars):
+def send_ricci_command(module, command, host = None, *vars):
     variables = ""
+
+    if host == None:
+        host = hostname
 
     for value in vars:
         variables = variables + '<var mutable="false" name="%s" type="%s" value="%s">' % (value[0],value[1],value[2])
@@ -1372,22 +1499,22 @@ def send_ricci_command(module, command, *vars):
     # If a password is set, then we authenticate
     if password != None:
         msg = '<ricci function="authenticate" password="%s" version="1.0"/>' % password
-        res = send_to_ricci(msg)     
+        res = send_to_ricci(msg, host)     
         dom = minidom.parseString(res[1])
         if (not verify_authentication(dom)):
             print "Unable to authenticate with ricci node, please check password."
             sys.exit(1)
     
     msg = '<ricci function="process_batch" async="false" version="1.0"><batch><module name="%s"><request API_version="1.0"><function_call name="%s">%s</function_call></request></module></batch></ricci>' % (module,command,variables)
-    res = send_to_ricci(msg)
+    res = send_to_ricci(msg, host)
     dom = minidom.parseString(res[1].replace('\t',''))
     if (not verify_authentication(dom)):
-        print "Error: Not yet authenticated with %s (try -p option)" % hostname
+        print "Error: Not yet authenticated with %s (try -p option)" % host
         sys.exit(1)
     xml = dom.getElementsByTagName('function_response')[0].toxml()
     return xml 
 
-def send_to_ricci(msg):
+def send_to_ricci(msg, host=hostname):
     cert = os.path.expanduser("~/.ricci/cacert.pem")
     key = os.path.expanduser("~/.ricci/privkey.pem")
     config = os.path.expanduser("~/.ricci/cacert.config")
@@ -1424,9 +1551,9 @@ def send_to_ricci(msg):
 
     ss = ssl.wrap_socket(s, key, cert)
     try:
-        ss.connect((hostname, RICCI_PORT))
+        ss.connect((host, RICCI_PORT))
     except socket.error:
-        print "Unable to connect to %s, make sure the ricci server is started." % hostname
+        print "Unable to connect to %s, make sure the ricci server is started." % host
         sys.exit(1)
 
     log_msg ("***Sending to ricci server:")
