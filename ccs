@@ -412,8 +412,6 @@ def add_node(node_to_add,nodeid,votes):
         nodeid = 0
         while (True):
             nodeid = nodeid + 1
-            print nodeid
-            print nodeid_list
             if (str(nodeid) not in nodeid_list): break
 
     node.setAttribute("nodeid",str(nodeid))
