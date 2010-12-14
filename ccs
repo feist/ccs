@@ -20,6 +20,7 @@ sync = False
 usefile = False
 hostname = False
 filename = False
+activate = False
 
 class StopNodeThread (threading.Thread):
     def __init__ (self, host):
@@ -69,7 +70,7 @@ def main(argv):
     passwordset = False
     nodeid = votes = False
 
-    global password, debug, sync, hostname, usefile, filename
+    global password, debug, sync, hostname, usefile, filename, activate
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
         opts, args = getopt.getopt(argv, "dsh:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
@@ -79,7 +80,7 @@ def main(argv):
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
       "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
       "setlogging", "addlogger","removelogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "removefailoverdomainnode=", "setdlm", "removeheuristic", "startall", "stopall"])
+      "votes=", "removefailoverdomainnode=", "setdlm", "removeheuristic", "startall", "stopall", "activate"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -108,6 +109,7 @@ def main(argv):
         elif opt in ("--setversion"): setversion = True ; version = arg 
         elif opt in ("--incversion"): incrementversion = True
         elif opt in ("--sync"): sync = True
+        elif opt in ("--activate"): activate = True
         elif opt in ("--createcluster"):
             createcluster = True
             clustername = arg
@@ -247,6 +249,8 @@ Remotely control cluster infrastructure.
   -p, --password        Ricci user password for node running ricci
       --getconf         Print current cluster.conf file
       --sync            Sync config file to all nodes
+      --activate        Activate config on node (use this option with --sync
+                        to activate config on all nodes)
 
 Cluster Operations:
       --createcluster <cluster>
@@ -1472,7 +1476,10 @@ def set_cluster_conf(xml, increment = True):
         f.write(xml)
         f.close()
     else:
-        log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("cluster.conf","xml","",xml)))
+        if activate:
+            log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("propagate", "boolean", "true"),("cluster.conf","xml","",xml)))
+        else:
+            log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("cluster.conf","xml","",xml)))
 
 def verify_authentication(dom):
     ricci =  dom.getElementsByTagName("ricci")
