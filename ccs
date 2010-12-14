@@ -274,8 +274,6 @@ Node Operations:
       --votes <votes>   Specify number of votes for a node
 
 Fencing Operations:
-      --lsfenceinst <fence device>
-                        Lists available fence instances options for given
       --addmethod <method> <node>
                         Add a fence method to a specific node
       --removemethod <method> <node>
