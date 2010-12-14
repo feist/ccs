@@ -243,7 +243,7 @@ def usage():
     print """Usage: ccs [OPTION]...
 Remotely control cluster infrastructure.
 
-  -h, --help            Display this help and exit
+      --help            Display this help and exit
   -h, --host [host]     Cluster node to perform actions on
   -f, --file [file]     File to perform actions on
   -p, --password        Ricci user password for node running ricci
