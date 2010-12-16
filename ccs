@@ -50,7 +50,7 @@ class StartNodeThread (threading.Thread):
             self.output = "Started %s" % self.host
 
 def main(argv):
-    getconf = False
+    getconf = sendconf = False
     status = start = stop = startall = stopall = False
     listnodes = listservices = listdomains = False
     addnode = removenode = getversion = False
@@ -80,7 +80,7 @@ def main(argv):
       "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
       "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
       "setlogging", "addlogger","removelogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "removefailoverdomainnode=", "setdlm", "removeheuristic", "startall", "stopall", "activate"])
+      "votes=", "removefailoverdomainnode=", "setdlm", "removeheuristic", "startall", "stopall", "activate", "setconf"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -95,6 +95,7 @@ def main(argv):
             logging.debug("Filename = %s" % filename)
         elif opt in ("--password", "-p"): passwordset = True ; password = arg
         elif opt in ("--getconf"): getconf = True
+        elif opt in ("--setconf"): sendconf = True
         elif opt in ("--status"): status = True
         elif opt in ("--start"): start = True
         elif opt in ("--stop"): stop = True
@@ -193,6 +194,7 @@ def main(argv):
         sys.exit(2)
 
     if (getconf): get_cluster_conf()
+    if (sendconf): send_cluster_conf()
     if (status): get_cluster_status()
     if (stop): stop_node(hostname) 
     if (start): start_node(hostname)
@@ -248,6 +250,8 @@ Remotely control cluster infrastructure.
   -f, --file [file]     File to perform actions on
   -p, --password        Ricci user password for node running ricci
       --getconf         Print current cluster.conf file
+      --setconf         Use the file specified by '-f' to send to the host
+                        specified with '-h'
       --sync            Sync config file to all nodes
       --activate        Activate config on node (use this option with --sync
                         to activate config on all nodes)
@@ -1452,6 +1456,19 @@ def set_element_attributes(element, options):
             sys.exit(1)
         element.setAttribute(attr,val)
     return element
+
+# Send the cluster.conf file specified by -f to the host specified by -h
+def send_cluster_conf():
+    global usefile, filename
+    if not usefile or not filename:
+        print "Error: must specify a filename and host when using --setconf"
+        sys.exit(2)
+
+# Will default to the file
+    xml = get_cluster_conf_xml()
+# After reading file, zero out usefile and filename to send to host
+    usefile = filename = False
+    set_cluster_conf(xml, False)
 
 # Set the cluster.conf file and increment the version
 def set_cluster_conf(xml, increment = True):
