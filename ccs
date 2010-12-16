@@ -363,59 +363,72 @@ def stop_node(node, inthread=False):
         if var.getAttribute("name") != "success":
             continue
         if not var.hasAttribute("value"):
+            myerr = "Unable to get valid response from ricci for %s." % node
             if inthread:
-                return "Unable to get valid response from ricci for %s." % node
+                return myerr
             else:
-                print "Unable to get valid response from ricci for %s." % node
+                print myerr
                 sys.exit(1)
         if var.getAttribute("value") == "false":
+            myerr = "Unable to stop %s." % node
             if inthread:
-                return "Unable to stop %s."
+                return myerr
             else:
-                print "Unable to stop %s."
+                print myerr
                 sys.exit(1)
 
         # If it succeeds print nothing and return 0
         if var.getAttribute("value") == "true":
             return 0
 
+    myerr = "Unable to get valid response from ricci for %s." % node
     if inthread:
-        return "Unable to get valid response from ricci for %s." % node
+        return myerr
     else:
-        print "Unable to get valid response from ricci for %s." % node
+        print myerr
         sys.exit(1)
     
 def start_node(node, inthread=False):
+    error_description = ""
     xml = send_ricci_command("cluster", "start_node", node)
 
     dom = minidom.parseString(xml)
     vars = dom.getElementsByTagName('var')
     for var in vars:
+        if var.getAttribute("name") == "error_description":
+            error_description = var.getAttribute("value")
+            break
+
+    for var in vars:
         if var.getAttribute("name") != "success":
             continue
 
         if not var.hasAttribute("value"):
+            myerr = "Unable to get valid response from ricci for %s." % node
             if inthread:
-                return "Unable to get valid response from ricci for %s." % node
+                return myerr
             else:
-                print "Unable to get valid response from ricci for %s." % node
+                print myerr
                 sys.exit(1)
 
         if var.getAttribute("value") == "false":
+            myerr = "Unable to start %s, possibly do to lack of quorum, try --startall\n" % node
+            myerr += "Error: " +error_description
             if inthread:
-                return "Unable to start %s, possibly do to lack of quorum, try --startall" % node
+                return myerr
             else:
-                print "Unable to start %s, possibly do to lack of quorum, try --startall" % node
+                print myerr
                 sys.exit(1)
 
         # If it succeeds print nothing and return 0
         if var.getAttribute("value") == "true":
             return 0
 
+    myerr = "Unable to get valid response from ricci for %s." % node
     if inthread:
-        return "Unable to get valid response from ricci for %s." % node
+        return myerr
     else:
-        print "Unable to get valid response from ricci for %s." % node
+        print myerr
         sys.exit(1)
 
 def start_all(nodelist = None):
