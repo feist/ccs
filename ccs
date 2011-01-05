@@ -620,8 +620,6 @@ def empty_cluster_conf(name="cluster"):
     top.setAttribute('config_version','1')
     top.setAttribute('name',name)
     fence_daemon = newdoc.createElement("fence_daemon")
-    fence_daemon.setAttribute('post_fail_delay','0')
-    fence_daemon.setAttribute('post_join_delay','3')
     clusternodes = newdoc.createElement("clusternodes")
     cman = newdoc.createElement("cman")
     fencedevices = newdoc.createElement("fencedevices")
