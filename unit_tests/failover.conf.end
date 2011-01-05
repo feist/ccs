@@ -1,5 +1,5 @@
 <cluster config_version="24" name="mycluster">
-  <fence_daemon post_fail_delay="0" post_join_delay="3"/>
+  <fence_daemon/>
   <clusternodes>
     <clusternode name="node1" nodeid="1"/>
     <clusternode name="node2" nodeid="2"/>
