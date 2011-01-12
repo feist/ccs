@@ -60,7 +60,7 @@ def main(argv):
     addfenceinst = removefenceinst = False
     lsfencedev = lsfenceinst = False
     addfailoverdomain = removefailoverdomain = False
-    addfailoverdomainnode = removefailoverdomainnode = False
+    lsfailoverdomain = addfailoverdomainnode = removefailoverdomainnode = False
     addservice = addsubservice = addresource = False
     removeservice = removesubservice = removeresource = False
     listquorum = setquorumd = addheuristic = removeheuristic = False
@@ -76,11 +76,11 @@ def main(argv):
         opts, args = getopt.getopt(argv, "dsh:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
       "lsservices", "listdomains", "addnode=", "rmnode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "rmmethod=", "addfencedev=", "rmfencedev=",
-      "addfenceinst=", "rmfenceinst=", "lsfencedev", "lsfenceinst=", "sync", "addfailoverdomain=",
+      "addfenceinst=", "rmfenceinst=", "lsfencedev", "lsfenceinst", "sync", "addfailoverdomain=",
       "rmfailoverdomain=", "addservice=", "rmservice=", "addsubservice=", "rmsubservice=", "addresource=",
       "rmresource=", "setquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
       "setlogging", "addlogger","rmlogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf", "lsquorum"])
+      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf", "lsquorum", "lsfailoverdomain"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -136,12 +136,15 @@ def main(argv):
             name = arg
             options = args
         elif opt in ("--lsfencedev"): lsfencedev = True;
-        elif opt in ("--lsfenceinst"): lsfenceinst = True; instance = arg
+        elif opt in ("--lsfenceinst"): lsfenceinst = True; options = args
+        elif opt in ("--lsfailoverdomain"): lsfailoverdomain = True
         elif opt in ("--addfailoverdomain"):
             addfailoverdomain = True
             name = arg
             options = args
-        elif opt in ("--rmfailoverdomain"): removefailoverdomain = True; name = arg
+        elif opt in ("--rmfailoverdomain"):
+            removefailoverdomain = True
+            name = arg
         elif opt in ("--addfailoverdomainnode"):
             addfailoverdomainnode = True
             name = arg
@@ -216,8 +219,9 @@ def main(argv):
     if (removefencedev): remove_fencedev(name)
     if (addfenceinst): add_fenceinst(name, options)
     if (removefenceinst): remove_fenceinst(name, options)
-    if (lsfencedev): ls_fencedev()
-    if (lsfenceinst): ls_fenceinst(arg)
+    if (lsfencedev): list_fencedev()
+    if (lsfenceinst): list_fenceinst(options)
+    if (lsfailoverdomain): list_failoverdomain()
     if (addfailoverdomain): add_failoverdomain(name, options)
     if (removefailoverdomain): remove_failoverdomain(name)
     if (addfailoverdomainnode): add_failoverdomainnode(name, options)
@@ -280,6 +284,10 @@ Node Operations:
       --votes <votes>   Specify number of votes for a node
 
 Fencing Operations:
+      --lsfencedev      List all of the fence devices configured
+      --lsfenceinst [<node>]
+                        List all of the fence methods and instances on the
+                        specified node or all nodes if no node is specified
       --addmethod <method> <node>
                         Add a fence method to a specific node
       --rmmethod <method> <node>
@@ -295,6 +303,9 @@ Fencing Operations:
                         the given method and node
 
 Failover Domain Operations:
+      --lsfailoverdomain
+                        Lists all of the failover domains and failover domain
+                        nodes configured in the cluster
       --addfailoverdomain <name> [restricted] [ordered] [nofailback]
                         Add failover domain
       --rmfailoverdomain <name>
@@ -831,6 +842,17 @@ def remove_fenceinst(name, options):
 
     set_cluster_conf(dom.toxml())
 
+def list_failoverdomain():
+    dom = minidom.parseString(get_cluster_conf_xml())
+    fds = dom.getElementsByTagName("failoverdomain")
+    if len(fds) == 0:
+        sys.exit(0)
+
+    for fd in fds:
+        print fd.getAttribute("name") + ": " + getNodeAttr(fd,"name")
+        for fdn in fd.getElementsByTagName("failoverdomainnode"):
+            print "  " + fdn.getAttribute("name") + ": " + getNodeAttr(fdn,"name")
+
 def add_failoverdomain(name, options):
     dom = minidom.parseString(get_cluster_conf_xml())
 
@@ -961,25 +983,62 @@ def remove_failoverdomainnode(name, options):
     sys.exit(1)
 
 
+def list_fencedev():
+    dom = minidom.parseString(get_cluster_conf_xml())
+    fds = dom.getElementsByTagName('fencedevices')
 
-def ls_fencedev():
-    rng = open(CLUSTERRNG)
-    dom = minidom.parseString(rng.read())
-    for elem in dom.getElementsByTagName("group"):
-        if elem.getAttribute("rha:fence_agent"):
-            print elem.getAttribute("rha:fence_agent")
+    # If no fencedevice section, we don't print anything
+    if len(fds) == 0:
+        sys.exit(0)
 
-def ls_fenceinst(fencedev):
-    rng = open(CLUSTERRNG)
-    dom = minidom.parseString(rng.read())
-    for elem in dom.getElementsByTagName("group"):
-        if elem.getAttribute("rha:fence_agent") == fencedev:
-            for attr in elem.getElementsByTagName("attribute"):
-                attrname = attr.getAttribute("name")
-                invisible_attrs = ["verbose", "debug", "version", "help",
-                        "option", "action", "separator"]
-                if attrname not in invisible_attrs:
-                    print attr.getAttribute("name") + " - " + attr.getAttribute("rha:description")
+    for fd in fds[0].getElementsByTagName('fencedevice'):
+        print fd.getAttribute("name") + ": " + getNodeAttr(fd,"name")
+
+def list_fenceinst(options):
+    if len(options) == 0:
+        node = None
+    else:
+        node = options[0]
+
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    nodes = dom.getElementsByTagName("clusternode")
+
+    if node != None:
+        for n in nodes:
+            if n.getAttribute("name") != node:
+                nodes.remove(n)
+                break;
+
+    for n in nodes:
+        print n.getAttribute("name")
+        for method in n.getElementsByTagName('method'):
+            print "  " + method.getAttribute('name')
+            for inst in method.getElementsByTagName('device'):
+                print "    " + inst.getAttribute("name") + ": " + getNodeAttr(inst, "name")
+    return
+
+
+# Disabling these functions until we get a better idea of how to
+# display fencing options
+#def ls_fencedev():
+#    rng = open(CLUSTERRNG)
+#    dom = minidom.parseString(rng.read())
+#    for elem in dom.getElementsByTagName("group"):
+#        if elem.getAttribute("rha:fence_agent"):
+#            print elem.getAttribute("rha:fence_agent")
+#
+#def ls_fenceinst(fencedev):
+#    rng = open(CLUSTERRNG)
+#    dom = minidom.parseString(rng.read())
+#    for elem in dom.getElementsByTagName("group"):
+#        if elem.getAttribute("rha:fence_agent") == fencedev:
+#            for attr in elem.getElementsByTagName("attribute"):
+#                attrname = attr.getAttribute("name")
+#                invisible_attrs = ["verbose", "debug", "version", "help",
+#                        "option", "action", "separator"]
+#                if attrname not in invisible_attrs:
+#                    print attr.getAttribute("name") + " - " + attr.getAttribute("rha:description")
 
 def add_service(name, options):
     dom = minidom.parseString(get_cluster_conf_xml())
