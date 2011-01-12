@@ -63,7 +63,7 @@ def main(argv):
     addfailoverdomainnode = removefailoverdomainnode = False
     addservice = addsubservice = addresource = False
     removeservice = removesubservice = removeresource = False
-    addquorumd = addheuristic = removeheuristic = False
+    listquorum = setquorumd = addheuristic = removeheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
     setlogging = addlogger = removelogger = False
     setdlm = setmulticast = False
@@ -78,9 +78,9 @@ def main(argv):
       "createcluster=", "password=", "addmethod=", "rmmethod=", "addfencedev=", "rmfencedev=",
       "addfenceinst=", "rmfenceinst=", "lsfencedev", "lsfenceinst=", "sync", "addfailoverdomain=",
       "rmfailoverdomain=", "addservice=", "rmservice=", "addsubservice=", "rmsubservice=", "addresource=",
-      "rmresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
+      "rmresource=", "setquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
       "setlogging", "addlogger","rmlogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf"])
+      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf", "lsquorum"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -173,7 +173,8 @@ def main(argv):
             removeresource = True
             name = arg
             options = args
-        elif opt in ("--addquorumd"): addquorumd = True; options = args
+        elif opt in ("--lsquorumd"): listquorum = True
+        elif opt in ("--setquorumd"): setquorumd = True; options = args
         elif opt in ("--addheuristic"): addheuristic = True; options = args
         elif opt in ("--rmheuristic"): removeheuristic = True; options = args
         elif opt in ("--settotem"): settotem = True; options = args
@@ -227,7 +228,8 @@ def main(argv):
     if (removesubservice): remove_subservice(name, options)
     if (addresource): add_resource(name, options)
     if (removeresource): remove_resource(name, options)
-    if (addquorumd): add_quorumd(options)
+    if (listquorum): list_quorum()
+    if (setquorumd): set_quorumd(options)
     if (addheuristic): add_heuristic(options)
     if (removeheuristic): remove_heuristic(options)
     if (settotem): set_totem(options)
@@ -303,6 +305,8 @@ Failover Domain Operations:
                         Remove node from failover domain
 
 Service Operations:
+      --lsservices      List currently configured services and resources in
+                        the cluster
       --addservice <servicename> [service options] ...
                         Add service to cluster
       --rmservice <servicename>
@@ -321,11 +325,10 @@ Service Operations:
                         Add resources to the cluster
       --rmresource <resource type> [resource options]
                         Remove specified resource with resource options
-      --lsservices      List currently configured services and resources in
-                        the cluster
 
 Quorum Operations:
-      --addquorumd [quorumd options] ...
+      --lsquorum        List quorum options and heuristics
+      --setquorumd [quorumd options] ...
                         Add quorumd options
       --addheuristic [heuristic options] ...
                         Add heuristics to quorumd
@@ -490,7 +493,7 @@ def list_nodes():
     xml = get_cluster_conf_xml()
     dom = minidom.parseString(xml)
     for node in dom.getElementsByTagName('clusternode'):
-        print node.getAttribute("name")
+        print node.getAttribute("name") + ": " + getNodeAttr(node, "name")
 
 def list_services():
     xml = get_cluster_conf_xml()
@@ -509,16 +512,21 @@ def print_services_map(node,level):
     for i in range(num_spaces):
         prefix = " " + prefix
 
+    nodeattr = getNodeAttr(node)
+
+    print prefix + node.tagName + ": " + nodeattr
+    for cn in node.childNodes:
+        print_services_map(cn, level + 1)
+
+def getNodeAttr(node, ignore = []):
     nodeattr = ""
     if node.attributes != None:
         length = node.attributes.length
         for i in range(length):
-            nodeattr = nodeattr + node.attributes.item(i).name + ": " + node.attributes.item(i).value + ", "
-
+            if node.attributes.item(i).name not in ignore:
+                nodeattr = nodeattr + node.attributes.item(i).name + "=" + node.attributes.item(i).value + ", "
     nodeattr = re.sub(r", $","", nodeattr)
-    print prefix + node.tagName + ": " + nodeattr
-    for cn in node.childNodes:
-        print_services_map(cn, level + 1)
+    return nodeattr
 
 def list_domains():
     xml = get_cluster_conf_xml()
@@ -1187,7 +1195,23 @@ def remove_resource(type, options):
             
     set_cluster_conf(dom.toxml())
 
-def add_quorumd(options):
+def list_quorum():
+    xml = get_cluster_conf_xml()
+    dom = minidom.parseString(xml)
+    quorum = dom.getElementsByTagName('quorumd')
+
+    # If no quorum section, we don't print anything
+    if len(quorum) == 0:
+        sys.exit(0)
+
+    quorum = quorum[0]
+    print "Quorumd: " + getNodeAttr(quorum)
+
+    heuristics = quorum.getElementsByTagName('heuristic')
+    for h in heuristics:
+        print "  heuristic: " + getNodeAttr(h)
+
+def set_quorumd(options):
     dom = minidom.parseString(get_cluster_conf_xml())
 
     # If quorumd section exists we rewrite it, else we create a new one
@@ -1200,12 +1224,18 @@ def add_quorumd(options):
     else:
         quorumd = quorumd[0]
 
+    while(quorumd.attributes.length != 0):
+        quorumd.removeAttribute(quorumd.attributes.item(0).name)
     quorumd = set_element_attributes(quorumd, options)
 
     set_cluster_conf(dom.toxml())
 
 def add_heuristic(options):
     dom = minidom.parseString(get_cluster_conf_xml())
+
+    if len(options) == 0:
+        print "You must specify at least one option when adding a heuristic."
+        sys.exit(1)
 
     # If quorumd section is present we use it, else we create an empty one
     quorumd = dom.getElementsByTagName('quorumd')
@@ -1245,21 +1275,25 @@ def remove_heuristic(options):
             sys.exit(1)
         heuristic_options[attr] = val
 
-    for hueristic in dom.getElementsByTagName('heuristic'):
+    heuristicMatch = False
+    for heuristic in dom.getElementsByTagName('heuristic'):
+        if options == [] and heuristic.attributes.length == 0:
+            heuristicMatch = True
+            break
         for option,val in heuristic_options.iteritems():
-            if hueristic.getAttribute(option) != val:
-                hueristicMatch = False
+            if heuristic.getAttribute(option) != val:
+                heuristicMatch = False
                 break
             else:
-                hueristicMatch = True
-        if hueristicMatch == True:
+                heuristicMatch = True
+        if heuristicMatch == True:
             break
 
-    if hueristicMatch != True:
-        print "Unable to find matching hueristic: %s, %s" % (type,options)
+    if heuristicMatch != True:
+        print "Unable to find matching heuristic: %s" % (options)
         sys.exit(1)
 
-    quorumd.removeChild(hueristic)
+    quorumd.removeChild(heuristic)
             
     set_cluster_conf(dom.toxml())
 
