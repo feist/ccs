@@ -83,9 +83,9 @@ sub quorum_test {
   test ("$CCS -f $t --addnode node1",0);
   test ("$CCS -f $t --addnode node2",0);
   test ("$CCS -f $t --addheuristic options=TTT",0);
-  test ("$CCS -f $t --addquorumd options=XXX",0);
+  test ("$CCS -f $t --setquorumd options=XXX",0);
   test ("$CCS -f $t --addheuristic options=YYY",0);
-  test ("$CCS -f $t --addquorumd options=AAA",0);
+  test ("$CCS -f $t --setquorumd options=AAA",0);
   test ("$CCS -f $t --addheuristic options=BBB",0);
   test ("$CCS -f $t --addheuristic options=CCC",0);
 
