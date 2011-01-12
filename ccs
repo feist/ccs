@@ -249,7 +249,7 @@ def main(argv):
 
 def usage():
     print """Usage: ccs [OPTION]...
-Remotely control cluster infrastructure.
+Cluster configuration system.
 
       --help            Display this help and exit
   -h, --host [host]     Cluster node to perform actions on
