@@ -69,8 +69,8 @@ sub misc_test {
   test ("$CCS -f $t --addlogger mylog=4",0);
   test ("$CCS -f $t --addlogger mylog=5",0);
 
-  test ("$CCS -f $t --removelogger mylog=4",0);
-  test ("$CCS -f $t --removelogger mylog=4",1);
+  test ("$CCS -f $t --rmlogger mylog=4",0);
+  test ("$CCS -f $t --rmlogger mylog=4",1);
 
   $retval = diff ($t,"$t.end");
   #`rm $t`;
@@ -89,9 +89,9 @@ sub quorum_test {
   test ("$CCS -f $t --addheuristic options=BBB",0);
   test ("$CCS -f $t --addheuristic options=CCC",0);
 
-  test ("$CCS -f $t --removeheuristic options=TTT",0);
-  test ("$CCS -f $t --removeheuristic options=TTT",1);
-  test ("$CCS -f $t --removeheuristic options=BBB",0);
+  test ("$CCS -f $t --rmheuristic options=TTT",0);
+  test ("$CCS -f $t --rmheuristic options=TTT",1);
+  test ("$CCS -f $t --rmheuristic options=BBB",0);
 
   $retval = diff ($t,"$t.end");
   #`rm $t`;
@@ -108,7 +108,7 @@ sub service_test {
   test ("$CCS -f $t --addservice service2 a=b c=d",1);
   test ("$CCS -f $t --addservice service2",1);
   test ("$CCS -f $t --addservice service3 a=b c=d",0);
-  test ("$CCS -f $t --removeservice service3",0);
+  test ("$CCS -f $t --rmservice service3",0);
   test ("$CCS -f $t --addsubservice service1 nfs a=b c=1",0);
   test ("$CCS -f $t --addsubservice service2 nfs a=b c=2",0);
   test ("$CCS -f $t --addsubservice service2 nfs:nfs a=b c=3",0);
@@ -129,9 +129,9 @@ sub service_test {
   test ("$CCS -f $t --addsubservice service2 nfs[1]:nfs a=b c=16",0);
   test ("$CCS -f $t --addsubservice service2 nfs[2]:nfs a=b c=17",0);
 
-  test ("$CCS -f $t --removesubservice service2 nfs:nfs[1]:nfs[1]:nfs[1]",0);
-  test ("$CCS -f $t --removesubservice service2 nfs[2]:nfs",0);
-  test ("$CCS -f $t --removesubservice service2 nfs[2]:nfs",1);
+  test ("$CCS -f $t --rmsubservice service2 nfs:nfs[1]:nfs[1]:nfs[1]",0);
+  test ("$CCS -f $t --rmsubservice service2 nfs[2]:nfs",0);
+  test ("$CCS -f $t --rmsubservice service2 nfs[2]:nfs",1);
 
   test ("$CCS -f $t --addresource restype1 a=b b=1",0);
   test ("$CCS -f $t --addresource restype2 a=b b=2",0);
@@ -140,8 +140,8 @@ sub service_test {
   test ("$CCS -f $t --addresource restype3 a=b b=5",0);
   test ("$CCS -f $t --addresource restype3 a=b b=6",0);
 
-  test ("$CCS -f $t --removeresource restype3 a=b b=3",0);
-  test ("$CCS -f $t --removeresource restype3 a=b b=5",0);
+  test ("$CCS -f $t --rmresource restype3 a=b b=3",0);
+  test ("$CCS -f $t --rmresource restype3 a=b b=5",0);
 
 
   $retval = diff ($t,"$t.end");
@@ -166,8 +166,8 @@ sub failover_test {
   test ("$CCS -f $t --addfailoverdomain fd8 nofailback",0);
   test ("$CCS -f $t --addfailoverdomain fd9 restricted",0);
   test ("$CCS -f $t --addfailoverdomain fd9",1);
-  test ("$CCS -f $t --removefailoverdomain fd8",0);
-  test ("$CCS -f $t --removefailoverdomain fd8",1);
+  test ("$CCS -f $t --rmfailoverdomain fd8",0);
+  test ("$CCS -f $t --rmfailoverdomain fd8",1);
   test ("$CCS -f $t --addfailoverdomainnode fd1 node1",0);
   test ("$CCS -f $t --addfailoverdomainnode fd1 node1",0);
   test ("$CCS -f $t --addfailoverdomainnode fd2 node1",0);
@@ -180,9 +180,9 @@ sub failover_test {
   test ("$CCS -f $t --addfailoverdomainnode fd4 node1 1",0);
   test ("$CCS -f $t --addfailoverdomainnode fd5 node2 50",0);
   test ("$CCS -f $t --addfailoverdomainnode fd5 node1 1",0);
-  test ("$CCS -f $t --removefailoverdomainnode fd5 node1",0);
-  test ("$CCS -f $t --removefailoverdomainnode fd5 node1",1);
-  test ("$CCS -f $t --removefailoverdomainnode fd5 node2",0);
+  test ("$CCS -f $t --rmfailoverdomainnode fd5 node1",0);
+  test ("$CCS -f $t --rmfailoverdomainnode fd5 node1",1);
+  test ("$CCS -f $t --rmfailoverdomainnode fd5 node2",0);
 
   $retval = diff ($t,"$t.end");
   #`rm $t`;
@@ -202,21 +202,21 @@ sub fence_test {
   test ("$CCS -f $t --addmethod node2method2 node2",0);
   test ("$CCS -f $t --addmethod node1method3 node1",0);
   test ("$CCS -f $t --addmethod node2method3 node2",0);
-  test ("$CCS -f $t --removemethod node1method3 node1",0);
-  test ("$CCS -f $t --removemethod node1methodX node1",1);
+  test ("$CCS -f $t --rmmethod node1method3 node1",0);
+  test ("$CCS -f $t --rmmethod node1methodX node1",1);
   test ("$CCS -f $t --addfencedev fence_ilo agent=fence_ilo optiona=x optionb=y",0);
   test ("$CCS -f $t --addfencedev fence_apc agent=fence_apc optiona=x optionb=y",0);
   test ("$CCS -f $t --addfencedev fence_apc2 agent=fence_apc optiona=x optionb=y",0);
   test ("$CCS -f $t --addfencedev fence_apcX agent=fence_apc optiona=x optionb=y",0);
-  test ("$CCS -f $t --removefencedev fence_apcX",0);
-  test ("$CCS -f $t --removefencedev fence_apcX",1);
+  test ("$CCS -f $t --rmfencedev fence_apcX",0);
+  test ("$CCS -f $t --rmfencedev fence_apcX",1);
   test ("$CCS -f $t --addfenceinst fence_apcX node1 node1method",1);
   test ("$CCS -f $t --addfenceinst fence_ilo node1 node1method port=5",0);
   test ("$CCS -f $t --addfenceinst fence_ilo node1 node1method port=6",0);
   test ("$CCS -f $t --addfenceinst fence_apc node1 node1method port=1",0);
   test ("$CCS -f $t --addfenceinst fence_apc node1 badmethod port=1",1);
-  test ("$CCS -f $t --removefenceinst fence_ilo node1 node1method",0);
-  test ("$CCS -f $t --removefenceinst fence_ilo node1 node1method",1);
+  test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",0);
+  test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",1);
   $retval = diff ($t,"$t.end");
   #`rm $t`;
   return $retval;
@@ -262,17 +262,17 @@ sub add_remove_test {
   test ("$CCS -f $t --addnode node9",0);
 
 # Remove nodes (including onces that don't exist)
-  test ("$CCS -f $t --removenode node1",0);
-  test ("$CCS -f $t --removenode node1",1);
-  test ("$CCS -f $t --removenode xxxx",1);
-  test ("$CCS -f $t --removenode node2",0);
-  test ("$CCS -f $t --removenode node3",0);
-  test ("$CCS -f $t --removenode node4",0);
-  test ("$CCS -f $t --removenode node5",0);
-  test ("$CCS -f $t --removenode node6",0);
-  test ("$CCS -f $t --removenode node7",0);
-  test ("$CCS -f $t --removenode node8",0);
-  test ("$CCS -f $t --removenode node9",0);
+  test ("$CCS -f $t --rmnode node1",0);
+  test ("$CCS -f $t --rmnode node1",1);
+  test ("$CCS -f $t --rmnode xxxx",1);
+  test ("$CCS -f $t --rmnode node2",0);
+  test ("$CCS -f $t --rmnode node3",0);
+  test ("$CCS -f $t --rmnode node4",0);
+  test ("$CCS -f $t --rmnode node5",0);
+  test ("$CCS -f $t --rmnode node6",0);
+  test ("$CCS -f $t --rmnode node7",0);
+  test ("$CCS -f $t --rmnode node8",0);
+  test ("$CCS -f $t --rmnode node9",0);
 
 # Re-add all the nodes again
   test ("$CCS -f $t --addnode node1",0);

@@ -74,13 +74,13 @@ def main(argv):
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
         opts, args = getopt.getopt(argv, "dsh:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
-      "lsservices", "listdomains", "addnode=", "removenode=", "getversion","setversion=","incversion",
-      "createcluster=", "password=", "addmethod=", "removemethod=", "addfencedev=", "removefencedev=",
-      "addfenceinst=", "removefenceinst=", "lsfencedev", "lsfenceinst=", "sync", "addfailoverdomain=",
-      "removefailoverdomain=", "addservice=", "removeservice=", "addsubservice=", "removesubservice=", "addresource=",
-      "removeresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
-      "setlogging", "addlogger","removelogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "removefailoverdomainnode=", "setdlm", "removeheuristic", "startall", "stopall", "activate", "setconf"])
+      "lsservices", "listdomains", "addnode=", "rmnode=", "getversion","setversion=","incversion",
+      "createcluster=", "password=", "addmethod=", "rmmethod=", "addfencedev=", "rmfencedev=",
+      "addfenceinst=", "rmfenceinst=", "lsfencedev", "lsfenceinst=", "sync", "addfailoverdomain=",
+      "rmfailoverdomain=", "addservice=", "rmservice=", "addsubservice=", "rmsubservice=", "addresource=",
+      "rmresource=", "addquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
+      "setlogging", "addlogger","rmlogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
+      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -105,7 +105,7 @@ def main(argv):
         elif opt in ("--lsservices"): listservices = True
         elif opt in ("--listdomains"): listdomains = True
         elif opt in ("--addnode"): addnode = True ; node = arg 
-        elif opt in ("--removenode"): removenode = True ; node = arg 
+        elif opt in ("--rmnode"): removenode = True ; node = arg 
         elif opt in ("--getversion"): getversion = True
         elif opt in ("--setversion"): setversion = True ; version = arg 
         elif opt in ("--incversion"): incrementversion = True
@@ -118,7 +118,7 @@ def main(argv):
             addmethod = True
             method = arg
             options = args
-        elif opt in ("--removemethod"):
+        elif opt in ("--rmmethod"):
             removemethod = True
             method = arg
             options = args
@@ -126,12 +126,12 @@ def main(argv):
             addfencedev = True
             name = arg
             options = args
-        elif opt in ("--removefencedev"): removefencedev = True; name = arg
+        elif opt in ("--rmfencedev"): removefencedev = True; name = arg
         elif opt in ("--addfenceinst"):
             addfenceinst = True
             name = arg
             options = args
-        elif opt in ("--removefenceinst"):
+        elif opt in ("--rmfenceinst"):
             removefenceinst = True
             name = arg
             options = args
@@ -141,12 +141,12 @@ def main(argv):
             addfailoverdomain = True
             name = arg
             options = args
-        elif opt in ("--removefailoverdomain"): removefailoverdomain = True; name = arg
+        elif opt in ("--rmfailoverdomain"): removefailoverdomain = True; name = arg
         elif opt in ("--addfailoverdomainnode"):
             addfailoverdomainnode = True
             name = arg
             options = args
-        elif opt in ("--removefailoverdomainnode"):
+        elif opt in ("--rmfailoverdomainnode"):
             removefailoverdomainnode = True
             name = arg
             options = args
@@ -154,14 +154,14 @@ def main(argv):
             addservice = True
             name = arg
             options = args
-        elif opt in ("--removeservice"):
+        elif opt in ("--rmservice"):
             removeservice = True
             name = arg
         elif opt in ("--addsubservice"):
             addsubservice = True
             name = arg
             options = args
-        elif opt in ("--removesubservice"):
+        elif opt in ("--rmsubservice"):
             removesubservice = True
             name = arg
             options = args
@@ -169,13 +169,13 @@ def main(argv):
             addresource = True
             name = arg
             options = args
-        elif opt in ("--removeresource"):
+        elif opt in ("--rmresource"):
             removeresource = True
             name = arg
             options = args
         elif opt in ("--addquorumd"): addquorumd = True; options = args
         elif opt in ("--addheuristic"): addheuristic = True; options = args
-        elif opt in ("--removeheuristic"): removeheuristic = True; options = args
+        elif opt in ("--rmheuristic"): removeheuristic = True; options = args
         elif opt in ("--settotem"): settotem = True; options = args
         elif opt in ("--setrm"): setrm = True; options = args
         elif opt in ("--setcman"): setcman = True; options = args
@@ -183,7 +183,7 @@ def main(argv):
         elif opt in ("--setfencedaemon"): setfencedaemon = True; options = args
         elif opt in ("--setlogging"): setlogging = True; options = args
         elif opt in ("--addlogger"): addlogger = True; options = args
-        elif opt in ("--removelogger"): removelogger = True; options = args
+        elif opt in ("--rmlogger"): removelogger = True; options = args
         elif opt in ("--setmulticast"): setmulticast = True
         elif opt in ("--nodeid"): nodeid = arg
         elif opt in ("--votes"): votes = arg
@@ -272,7 +272,7 @@ Cluster Operations:
 Node Operations:
       --lsnodes         List all nodes in the cluster
       --addnode <node>  Add node <node> to the cluster
-      --removenode <node>
+      --rmnode <node>
                         Remove a node from the cluster
       --nodeid <nodeid> Specify nodeid when adding a node
       --votes <votes>   Specify number of votes for a node
@@ -280,46 +280,46 @@ Node Operations:
 Fencing Operations:
       --addmethod <method> <node>
                         Add a fence method to a specific node
-      --removemethod <method> <node>
+      --rmmethod <method> <node>
                         Remove a fence method from a specific node
       --addfencedev <device name> [fence device options]
                         Add fence device
-      --removefencedev <fence device name>
+      --rmfencedev <fence device name>
                         Remove fence device
       --addfenceinst <fence device name> <node> <method> <options>
                         Add fence instance
-      --removefenceinst <fence device name> <node> <method>
+      --rmfenceinst <fence device name> <node> <method>
                         Remove all instances of the fence device listed from
                         the given method and node
 
 Failover Domain Operations:
       --addfailoverdomain <name> [restricted] [ordered] [nofailback]
                         Add failover domain
-      --removefailoverdomain <name>
+      --rmfailoverdomain <name>
                         Remove failover domain
       --addfailoverdomainnode <failover domain> <node> [priority=xx]
                         Add node to given failover domain
-      --removefailoverdomainnode <failover domain> <node>
+      --rmfailoverdomainnode <failover domain> <node>
                         Remove node from failover domain
 
 Service Operations:
       --addservice <servicename> [service options] ...
                         Add service to cluster
-      --removeservice <servicename>
+      --rmservice <servicename>
                         Removes a service and all of its subservices
       --addsubservice <servicename> <subservice> [service options] ...
                         Add individual sub services, if adding services within
                         a tree, use ':' to separate elements and brackets to
                         identify subservices of the same type
                         Example: --addsubservice service_a nfs[1]:nfs[2]:nfs
-      --removesubservice <servicename> <subservice>
+      --rmsubservice <servicename> <subservice>
                         Removes a specific subservice specified by the
                         subservice, using ':' to separate elements and
                         brackets to identify between subservices of the
                         same type.
       --addresource <resource type> [resource options] ...
                         Add resources to the cluster
-      --removeresource <resource type> [resource options]
+      --rmresource <resource type> [resource options]
                         Remove specified resource with resource options
       --lsservices      List currently configured services and resources in
                         the cluster
@@ -329,7 +329,7 @@ Quorum Operations:
                         Add quorumd options
       --addheuristic [heuristic options] ...
                         Add heuristics to quorumd
-      --removeheuristic [heuristic options] ...
+      --rmheuristic [heuristic options] ...
                         Remove heuristic specified by heurstic options
 
 Misc Options
@@ -350,7 +350,7 @@ Misc Options
                         Set logging options
       --addlogger [logger options]
                         Add a logger
-      --removelogger [logger options]
+      --rmlogger [logger options]
                         Remove a logger
   """
 
