@@ -10,6 +10,7 @@ import re
 import threading
 import time, random
 from Queue import Queue
+import getpass
 
 RICCI_PORT = 11111
 CLUSTERRNG = "cluster.rng.in"
@@ -1610,7 +1611,16 @@ def verify_authentication(dom):
     print "Error: no ricci tag in ricci response"
     sys.exit(1)
 
+def check_authentication(host):
+    msg = '<ricci function="authenticate" password="%s" version="1.0"/>' % password
+    res = send_to_ricci(msg, host)     
+    dom = minidom.parseString(res[1])
+    if (not verify_authentication(dom)):
+        print "Unable to authenticate with ricci node, please check password."
+        sys.exit(1)
+
 def send_ricci_command(module, command, host = None, *vars):
+    global password
     variables = ""
 
     if host == None:
@@ -1624,56 +1634,61 @@ def send_ricci_command(module, command, host = None, *vars):
 
     # If a password is set, then we authenticate
     if password != None:
-        msg = '<ricci function="authenticate" password="%s" version="1.0"/>' % password
-        res = send_to_ricci(msg, host)     
-        dom = minidom.parseString(res[1])
-        if (not verify_authentication(dom)):
-            print "Unable to authenticate with ricci node, please check password."
-            sys.exit(1)
+        check_authentication(host)
     
     msg = '<ricci function="process_batch" async="false" version="1.0"><batch><module name="%s"><request API_version="1.0"><function_call name="%s">%s</function_call></request></module></batch></ricci>' % (module,command,variables)
     res = send_to_ricci(msg, host)
     dom = minidom.parseString(res[1].replace('\t',''))
     if (not verify_authentication(dom)):
-        print "Error: Not yet authenticated with %s (try -p option)" % host
-        sys.exit(1)
+        password = getpass.getpass();
+        check_authentication(host)
+        res = send_to_ricci(msg, host)
+        dom = minidom.parseString(res[1].replace('\t',''))
+        if (not verify_authentication(dom)):
+            print "Error: Not yet authenticated with %s (try -p option)" % host
+            sys.exit(1)
     xml = dom.getElementsByTagName('function_response')[0].toxml()
     return xml 
 
 def send_to_ricci(msg, host=hostname):
-    cert = os.path.expanduser("~/.ricci/cacert.pem")
-    key = os.path.expanduser("~/.ricci/privkey.pem")
-    config = os.path.expanduser("~/.ricci/cacert.config")
+    cert = os.path.expanduser("~/.ccs/cacert.pem")
+    key = os.path.expanduser("~/.ccs/privkey.pem")
+    config = os.path.expanduser("~/.ccs/cacert.config")
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     # Make sure we have a client certificate and private key
     # If not we need to autogenerate them (including creating an
     # openssl configuration file
     if (os.path.isfile(cert) == False or os.path.isfile(key) == False):
-        print "Autogenerating private key and certificate."
-        if not os.path.exists(os.path.expanduser("~/.ricci")):
-            os.mkdir(os.path.expanduser("~/.ricci"),0700);
+        log_msg("Autogenerating private key and certificate.")
+        if not os.path.exists(os.path.expanduser("~/.ccs")):
+            os.mkdir(os.path.expanduser("~/.ccs"),0700);
         f = open (config, 'w')
         f.write("""
-      [ req ]
-      distinguished_name     = req_distinguished_name
-      attributes             = req_attributes
-      prompt                 = no
+[ req ]
+distinguished_name     = req_distinguished_name
+attributes             = req_attributes
+prompt                 = no
 
-      [ req_distinguished_name ]
-      C                      = US
-      ST                     = State or Province
-      L                      = Locality
-      O                      = Organization Name
-      OU                     = Organizational Unit Name
-      CN                     = Common Name
-      emailAddress           = root@localhost
+[ req_distinguished_name ]
+C                      = US
+ST                     = State or Province
+L                      = Locality
+O                      = Organization Name
+OU                     = Organizational Unit Name
+CN                     = Common Name
+emailAddress           = root@localhost
 
-      [ req_attributes ]
+[ req_attributes ]
 """)
         f.close()
-        os.system ("/usr/bin/openssl genrsa -out %s 2048" % key)
-        os.system ("/usr/bin/openssl req -new -x509 -key %s -out %s -days 1825 -config ~/.ricci/cacert.config" % (key,cert))
+        if (debug):
+            redirect = ""
+        else:
+            redirect = " > /dev/null 2&>1"
+
+        os.system ("/usr/bin/openssl genrsa -out %s 2048 %s" % (key,redirect))
+        os.system ("/usr/bin/openssl req -new -x509 -key %s -out %s -days 1825 -config ~/.ccs/cacert.config" % (key,cert))
 
     ss = ssl.wrap_socket(s, key, cert)
     try:
