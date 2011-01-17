@@ -319,6 +319,10 @@ Failover Domain Operations:
 Service Operations:
       --lsservices      List currently configured services and resources in
                         the cluster
+      --addresource <resource type> [resource options] ...
+                        Add resources to the cluster
+      --rmresource <resource type> [resource options]
+                        Remove specified resource with resource options
       --addservice <servicename> [service options] ...
                         Add service to cluster
       --rmservice <servicename>
@@ -333,10 +337,6 @@ Service Operations:
                         subservice, using ':' to separate elements and
                         brackets to identify between subservices of the
                         same type.
-      --addresource <resource type> [resource options] ...
-                        Add resources to the cluster
-      --rmresource <resource type> [resource options]
-                        Remove specified resource with resource options
 
 Quorum Operations:
       --lsquorum        List quorum options and heuristics
