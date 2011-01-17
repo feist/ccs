@@ -256,8 +256,8 @@ def usage():
 Cluster configuration system.
 
       --help            Display this help and exit
-  -h, --host [host]     Cluster node to perform actions on
-  -f, --file [file]     File to perform actions on
+  -h, --host host     Cluster node to perform actions on
+  -f, --file file     File to perform actions on
   -p, --password        Ricci user password for node running ricci
       --getconf         Print current cluster.conf file
       --setconf         Use the file specified by '-f' to send to the host
