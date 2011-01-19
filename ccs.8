@@ -1,0 +1,194 @@
+.TH CCS 8
+.SH NAME
+ccs \- Cluster Configuration System
+.SH SYNOPSIS
+.B ccs [-h hostname | -f filename] [options]
+.SH DESCRIPTION
+.B ccs
+allows an administrator to create, modify and view a cluster configuration
+file on a remote node through ricci or on a local file system. Using
+.B ccs
+an administrator can also start and stop the cluster services on one or
+all of the nodes in a configured cluster.
+.SH OPTIONS
+Generally all command lines must specify either a hostname or filename to act
+upon.
+.SS "MAIN OPTIONS"
+.IP --help
+Display this help and exit
+.IP "-h, --host host"
+Cluster node to perform actions on
+.IP "-f, --file file"
+File to perform actions on
+.IP "-p, --password"
+Ricci user password for node running ricci
+.IP "--getconf"
+Print current cluster.conf file
+.IP "--setconf"
+Use the file specified by '-f' to send to the host
+specified with '-h'
+.IP "--checkconf"
+If file is specified, verify that all the nodes in the
+file have the same cluster.conf as the file.  If a
+host is specified then verify that all nodes in the
+host's cluster.conf file have the identical
+.IP "--sync"
+Sync config file to all nodes
+.IP "--activate"
+Activate config on node (use this option with --sync
+to activate config on all nodes)
+.IP "--debug"
+Display debugging information to help troubleshoot connection issues with ricci
+.SS "CLUSTER OPERATIONS"
+.IP "--createcluster cluster"
+Create a new cluster.conf (removing old one if it
+exists)
+.IP "--getversion"
+Get the current cluster.conf version
+.IP "--setversion <n>
+Set the cluster.conf version
+.IP "--incversion
+Increment the cluster.conf version by 1
+scp and put them in the current directory
+.IP "--startall
+Start cluster services on all nodes
+.IP "--stopall
+Stop cluster services on all nodes
+.IP "--start
+Start cluster services on host specified with -h
+.IP "--stop
+Stop cluster services on host specified with -h
+.SS "NODE OPERATIONS"
+.IP "--lsnodes
+List all nodes in the cluster
+.IP "--addnode <node>
+Add node <node> to the cluster
+.IP "--rmnode <node>
+Remove a node from the cluster
+.IP "--nodeid <nodeid>
+Specify nodeid when adding a node
+.IP "--votes <votes>
+Specify number of votes for a node
+.SS "FENCING OPERATIONS"
+.IP "--lsfencedev
+List all of the fence devices configured
+.IP "--lsfenceinst [<node>]
+List all of the fence methods and instances on the
+specified node or all nodes if no node is specified
+.IP "--addmethod <method> <node>
+Add a fence method to a specific node
+.IP "--rmmethod <method> <node>
+Remove a fence method from a specific node
+.IP "--addfencedev <device name> [fence device options]
+Add fence device
+.IP "--rmfencedev <fence device name>
+Remove fence device
+.IP "--addfenceinst <fence device name> <node> <method> <options>
+Add fence instance
+.IP "--rmfenceinst <fence device name> <node> <method>
+Remove all instances of the fence device listed from
+the given method and node
+.SS "FAILOVER DOMAIN OPERATIONS"
+.IP "--lsfailoverdomain
+Lists all of the failover domains and failover domain
+nodes configured in the cluster
+.IP "--addfailoverdomain <name> [restricted] [ordered] [nofailback]
+Add failover domain
+.IP "--rmfailoverdomain <name>
+Remove failover domain
+.IP "--addfailoverdomainnode <failover domain> <node> [priority=xx]
+Add node to given failover domain
+.IP "--rmfailoverdomainnode <failover domain> <node>
+Remove node from failover domain
+.SS "SERVICE OPERATIONS"
+.IP "--lsservices
+List currently configured services and resources in
+the cluster
+.IP "--addresource <resource type> [resource options] ...
+Add resources to the cluster
+.IP "--rmresource <resource type> [resource options]
+Remove specified resource with resource options
+.IP "--addservice <servicename> [service options] ...
+Add service to cluster
+.IP "--rmservice <servicename>
+Removes a service and all of its subservices
+.IP "--addsubservice <servicename> <subservice> [service options] ...
+Add individual sub services, if adding services within
+a tree, use ':' to separate elements and brackets to
+identify subservices of the same type
+Example: --addsubservice service_a nfs[1]:nfs[2]:nfs
+.IP "--rmsubservice <servicename> <subservice>
+Removes a specific subservice specified by the
+subservice, using ':' to separate elements and
+brackets to identify between subservices of the
+same type.
+.SS "QUORUM OPERATIONS"
+.IP "--lsquorum
+List quorum options and heuristics
+.IP "--setquorumd [quorumd options] ...
+Add quorumd options
+.IP "--addheuristic [heuristic options] ...
+Add heuristics to quorumd
+.IP "--rmheuristic [heuristic options] ...
+Remove heuristic specified by heurstic options
+.SS "MISC OPTIONS"
+.IP "--lsmisc
+List all of the misc options
+.IP "--settotem [totem options]
+Set totem options
+.IP "--setdlm [dlm options]
+Set dlm options
+.IP "--setrm [resource manager options]
+Set resource manager options
+.IP "--setcman [cman options]
+Set cman options
+.IP "--setmulticast [multicast address]
+Set's the multicast address to use (or removes it
+if no multicast address is given)
+.IP "--setfencedaemon [fence daemon options]
+Set fence daemon options
+.IP "--setlogging [logging options]
+Set logging options
+.IP "--addlogger [logger options]
+Add a logger
+.IP "--rmlogger [logger options]
+Remove a logger
+.SH FILES
+.I ~/.ccs/cacert.config ~/.ccs/cacert.pem ~/.ccs/privkey.pem
+.RS
+Automatically generated certificate files used to authenticate with ricci.
+.SH EXAMPLES
+.B Create and start a 3 node cluster with apc fencing:
+.br
+ccs -h host1 --createcluster mycluster
+.br
+ccs -h host1 --addnode host1
+.br
+ccs -h host1 --addnode host2
+.br
+ccs -h host1 --addnode host3
+.br
+ccs -h host1 --addmethod primary host1
+.br
+ccs -h host1 --addmethod primary host2
+.br
+ccs -h host1 --addmethod primary host3
+.br
+ccs -h host1 --addfencedev myfence ipaddr=192.168.0.200 login=apc password=apc
+.br
+ccs -h host1 --addfenceinst myfence host1 primary port=1
+.br
+ccs -h host1 --addfenceinst myfence host2 primary port=2
+.br
+ccs -h host1 --addfenceinst myfence host3 primary port=3
+.br
+ccs -h host1 --sync --activate
+.br
+ccs -h host1 --startall
+
+.SH AUTHOR
+Chris Feist <cfeist@redhat.com>
+.SH "SEE ALSO"
+.BR ricci (8),
+.BR cluster.conf (5),
+.BR ccs_tool (8)
