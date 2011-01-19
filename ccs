@@ -71,6 +71,7 @@ def main(argv):
     setdlm = setmulticast = False
     passwordset = False
     nodeid = votes = False
+    checkconf = False
 
     global password, debug, sync, hostname, usefile, filename, activate
 #    logging.basicConfig(level=logging.DEBUGRemove
@@ -82,7 +83,7 @@ def main(argv):
       "rmfailoverdomain=", "addservice=", "rmservice=", "addsubservice=", "rmsubservice=", "addresource=",
       "rmresource=", "setquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
       "setlogging", "addlogger","rmlogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf", "lsquorum", "lsfailoverdomain", "lsmisc"])
+      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -97,6 +98,7 @@ def main(argv):
             logging.debug("Filename = %s" % filename)
         elif opt in ("--password", "-p"): passwordset = True ; password = arg
         elif opt in ("--getconf"): getconf = True
+        elif opt in ("--checkconf"): checkconf = True
         elif opt in ("--setconf"): sendconf = True
         elif opt in ("--status"): status = True
         elif opt in ("--start"): start = True
@@ -202,6 +204,7 @@ def main(argv):
 
     if (getconf): get_cluster_conf()
     if (sendconf): send_cluster_conf()
+    if (checkconf): check_cluster_conf()
     if (status): get_cluster_status()
     if (stop): stop_node(hostname) 
     if (start): start_node(hostname)
@@ -256,15 +259,23 @@ def usage():
 Cluster configuration system.
 
       --help            Display this help and exit
-  -h, --host host     Cluster node to perform actions on
-  -f, --file file     File to perform actions on
+  -h, --host host       Cluster node to perform actions on
+  -f, --file file       File to perform actions on
   -p, --password        Ricci user password for node running ricci
       --getconf         Print current cluster.conf file
       --setconf         Use the file specified by '-f' to send to the host
                         specified with '-h'
+      --checkconf       If file is specified, verify that all the nodes in the
+                        file have the same cluster.conf as the file.  If a
+                        host is specified then verify that all nodes in the
+                        host's cluster.conf file have the identical
+                        cluster.conf file
+                        same cluster.conf
       --sync            Sync config file to all nodes
       --activate        Activate config on node (use this option with --sync
                         to activate config on all nodes)
+      --debug           Display debugging information to help troubleshoot
+                        connection issues with ricci
 
 Cluster Operations:
       --createcluster <cluster>
@@ -1587,9 +1598,9 @@ def send_cluster_conf():
         print "Error: must specify a filename and host when using --setconf"
         sys.exit(2)
 
-# Will default to the file
+    # Will default to the file
     xml = get_cluster_conf_xml()
-# After reading file, zero out usefile and filename to send to host
+    # After reading file, zero out usefile and filename to send to host
     usefile = filename = False
     set_cluster_conf(xml, False)
 
@@ -1618,6 +1629,29 @@ def set_cluster_conf(xml, increment = True):
             log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("propagate", "boolean", "true"),("cluster.conf","xml","",xml)))
         else:
             log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("cluster.conf","xml","",xml)))
+
+def check_cluster_conf():
+    global hostname, usefile
+    xml = get_cluster_conf_xml()
+    dom = minidom.parseString(xml)
+    
+    usefile = False
+    bad_nodes = []
+    orig_hostname = hostname
+    for node in dom.getElementsByTagName("clusternode"):
+        hostname = node.getAttribute("name")
+        if hostname == orig_hostname:
+            continue
+        xml2 = get_cluster_conf_xml()
+        if xml2 != xml:
+            print "Node: %s does not match" % hostname
+            bad_nodes << hostname
+
+    hostname = orig_hostname
+    if len(bad_nodes) > 0:
+        sys.exit(1)
+    else:
+        print "All nodes in sync."
 
 def verify_authentication(dom):
     ricci =  dom.getElementsByTagName("ricci")
@@ -1658,7 +1692,7 @@ def send_ricci_command(module, command, host = None, *vars):
     res = send_to_ricci(msg, host)
     dom = minidom.parseString(res[1].replace('\t',''))
     if (not verify_authentication(dom)):
-        password = getpass.getpass();
+        password = getpass.getpass(host + " password: ");
         check_authentication(host)
         res = send_to_ricci(msg, host)
         dom = minidom.parseString(res[1].replace('\t',''))
