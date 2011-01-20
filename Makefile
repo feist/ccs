@@ -13,8 +13,8 @@ tarball:
 
 install:
 	install ccs ${DESTDIR}/${SBINDIR}/ccs
-	install -d ${MANDIR}/man8
-	install ccs.8 ${MANDIR}/man8
+	install -d ${DESTDIR}/${MANDIR}/man8
+	install ccs.8 ${DESTDIR}/${MANDIR}/man8
 
 test:
 	cd unit_tests; ./unittest.pl
