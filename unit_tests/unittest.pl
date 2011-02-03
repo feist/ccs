@@ -34,6 +34,16 @@ if (misc_test("misc.conf") == 0) {
   print "Misc Test Succeeded\n";
 }
 
+#if (expmode_test("exp.conf") == 0) {
+#  print "Expert Mode Test Succeeded\n";
+#}
+
+sub expmode_test {
+  $t = shift @_;
+  test ("$CCS -f $t --createcluster mycluster",0);
+  test ("$CCS -f $t --exp fence_daemon cluster",0);
+}
+
 sub misc_test {
   $t = shift @_;
   test ("$CCS -f $t --createcluster mycluster",0);

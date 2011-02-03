@@ -72,6 +72,7 @@ def main(argv):
     passwordset = False
     nodeid = votes = False
     checkconf = False
+    exp = exprm = False
 
     global password, debug, sync, hostname, usefile, filename, activate
 #    logging.basicConfig(level=logging.DEBUGRemove
@@ -83,7 +84,7 @@ def main(argv):
       "rmfailoverdomain=", "addservice=", "rmservice=", "addsubservice=", "rmsubservice=", "addresource=",
       "rmresource=", "setquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
       "setlogging", "addlogger","rmlogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf"])
+      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -197,6 +198,8 @@ def main(argv):
         elif opt in ("--nodeid"): nodeid = arg
         elif opt in ("--votes"): votes = arg
         elif opt in ("-d"): debug = True
+      	elif opt in ("--exp"): exp = True; tag = arg; options = args
+      	elif opt in ("--exprm"): exprm = True; location = arg
 
     if not hostname and not filename:
         print "Must specify a hostname or filename."
@@ -252,6 +255,8 @@ def main(argv):
     if (addlogger): add_logger(options)
     if (removelogger): remove_logger(options)
     if (setmulticast): set_multicast(arg)
+    if (exp): expert_mode(tag, options)
+    if (exprm): expert_mode_remove(location)
     if (sync): sync_cluster_conf()
 
 def usage():
@@ -276,6 +281,12 @@ Cluster configuration system.
                         to activate config on all nodes)
       --debug           Display debugging information to help troubleshoot
                         connection issues with ricci
+      --exp tag [location] [options]
+                        Expert mode to add elements not currently defined in
+                        ccs (see man page for more information)
+      --exprm location
+                        Expert mode to remove elements not currently defined in
+                        ccs (see man page for more information)
 
 Cluster Operations:
       --createcluster <cluster>
@@ -1106,8 +1117,9 @@ def add_subservice(name, options):
     dom = minidom.parseString(get_cluster_conf_xml())
     serviceFound = False
 
-    services = options.pop(0).split(':')
-    subservice_type = services.pop(-1)
+    location = options.pop(0).split(':')
+    subservice_type = location.pop(-1)
+    location = ":".join(location)
 
     # Verify top level service exists
     for service in dom.getElementsByTagName("service"):
@@ -1119,29 +1131,11 @@ def add_subservice(name, options):
         print "Unable to find service: %s" % name
         sys.exit(1)
 
-    for subserv in services:
-        element_number = 0
-        r = re.search(r"\[(\d+)\]$", subserv)
-        if r:
-            if r.group(1):
-                element_number = int(r.group(1))
-        subserv = re.sub(r"\[\d+\]$", "",  subserv)
 
-
-        count = 0
-        subserviceFound = False
-        for e in service.childNodes:
-            if e.nodeType != e.ELEMENT_NODE:
-                continue
-            if e.tagName == subserv:
-                if count == element_number:
-                    service = e
-                    subserviceFound = True
-                    break
-                else: count = count + 1
-        if subserviceFound == False:
-            print "Unable to find service %s" % "/".join(services)
-            sys.exit(1)
+    service = getLocation(service, location)
+    if service == None:
+        print "Unable to find service %s" % location
+        sys.exit(1)
 
     subservice = service.appendChild(dom.createElement(subservice_type))
     subservice = set_element_attributes(subservice, options)
@@ -1152,7 +1146,7 @@ def remove_subservice(name, options):
     dom = minidom.parseString(get_cluster_conf_xml())
     serviceFound = False
 
-    services = options.pop(0).split(':')
+    location = options.pop(0)
 
     # Verify that the service exists
     for service in dom.getElementsByTagName("service"):
@@ -1164,32 +1158,73 @@ def remove_subservice(name, options):
         print "Unable to find service: %s" % name
         sys.exit(1)
 
-    for subserv in services:
-        element_number = 0
-        r = re.search(r"\[(\d+)\]$", subserv)
-        if r:
-            if r.group(1):
-                element_number = int(r.group(1))
-        subserv = re.sub(r"\[\d+\]$", "",  subserv)
-
-
-        count = 0
-        subserviceFound = False
-        for e in service.childNodes:
-            if e.nodeType != e.ELEMENT_NODE:
-                continue
-            if e.tagName == subserv:
-                if count == element_number:
-                    service = e
-                    subserviceFound = True
-                    break
-                else: count = count + 1
-        if subserviceFound == False:
-            print "Unable to find service %s" % "/".join(services)
-            sys.exit(1)
+    service = getLocation(service, location)
+    if service == None:
+        print "Unable to find service %s" % location
+        sys.exit(1)
 
     service.parentNode.removeChild(service)
     set_cluster_conf(dom.toxml())
+
+def expert_mode(tag, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    parent = dom.getElementsByTagName('cluster')[0]
+    if len(options) != 0:
+        location = options.pop(0)
+
+        parent = getLocation(parent,location) 
+        if parent == None:
+            print "Unable to find %s" % location
+            sys.exit(1)
+
+    newelement = parent.appendChild(dom.createElement(tag))
+    newelement = set_element_attributes(newelement, options)
+    set_cluster_conf(dom.toxml())
+
+def expert_mode_remove(location):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    parent = dom.getElementsByTagName('cluster')[0]
+    parent = getLocation(parent,location) 
+    if parent == None:
+        print "Unable to find %s" % location
+        sys.exit(1)
+
+    parent.parentNode.removeChild(parent)
+    set_cluster_conf(dom.toxml())
+
+# Return the element specified by the location in dom
+# Elements separated by ':' and elements of the same name referenced by [n]
+def getLocation(dom, location):
+    if location == "":
+        return dom
+
+    elems = location.split(':')
+
+    for elem in elems:
+        element_number = 0
+        r = re.search(r"\[(\d+)\]$", elem)
+        if r:
+            if r.group(1):
+                element_number = int(r.group(1))
+        elem = re.sub(r"\[\d+\]$", "",  elem)
+
+        count = 0
+        element_found = False
+        for node in dom.childNodes:
+            if node.nodeType != node.ELEMENT_NODE:
+                continue
+            if node.tagName == elem:
+                if count == element_number:
+                    dom = node
+                    element_found = True
+                    break
+                else: count = count + 1
+        if element_found == False:
+            return None
+
+    return dom
 
 def add_resource(type, options):
     dom = minidom.parseString(get_cluster_conf_xml())
