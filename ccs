@@ -83,7 +83,7 @@ def main(argv):
       "addfenceinst=", "rmfenceinst=", "lsfencedev", "lsfenceinst", "sync", "addfailoverdomain=",
       "rmfailoverdomain=", "addservice=", "rmservice=", "addsubservice=", "rmsubservice=", "addresource=",
       "rmresource=", "setquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
-      "setlogging", "addlogger","rmlogger","setmulticast=","sync","addfailoverdomainnode=", "file=", "nodeid=",
+      "setlogging", "addlogger","rmlogger","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm="])
     except getopt.GetoptError:
         usage()
@@ -194,7 +194,7 @@ def main(argv):
         elif opt in ("--setlogging"): setlogging = True; options = args
         elif opt in ("--addlogger"): addlogger = True; options = args
         elif opt in ("--rmlogger"): removelogger = True; options = args
-        elif opt in ("--setmulticast"): setmulticast = True
+        elif opt in ("--setmulticast"): setmulticast = True; options = args
         elif opt in ("--nodeid"): nodeid = arg
         elif opt in ("--votes"): votes = arg
         elif opt in ("-d"): debug = True
@@ -254,7 +254,7 @@ def main(argv):
     if (setlogging): set_logging(options)
     if (addlogger): add_logger(options)
     if (removelogger): remove_logger(options)
-    if (setmulticast): set_multicast(arg)
+    if (setmulticast): set_multicast(options)
     if (exp): expert_mode(tag, options)
     if (exprm): expert_mode_remove(location)
     if (sync): sync_cluster_conf()
@@ -1579,8 +1579,9 @@ def remove_logger(options):
             
     set_cluster_conf(dom.toxml())
 
-def set_multicast(arg):
+def set_multicast(options):
     dom = minidom.parseString(get_cluster_conf_xml())
+
 
     cman = dom.getElementsByTagName("cman")
     if len(cman) == 0:
@@ -1593,12 +1594,19 @@ def set_multicast(arg):
         sys.exit(1)
 
     mc = cman.getElementsByTagName('multicast')
+
+    # If 0 or 1 options are passed it's valid and we remove old configs
+    # If more than 1 option is passed, it's a usage error
+    if len(options) > 1:
+        print "Too many options passed to --setmulticast"
+        sys.exit(1)
+
     for i in mc:
         cman.removeChild(i)
 
-    if arg != "":
+    if len(options) == 1:
         mc = dom.createElement("multicast")
-        mc.setAttribute("addr",arg)
+        mc.setAttribute("addr",options[0])
         cman.appendChild(mc)
 
     set_cluster_conf(dom.toxml())

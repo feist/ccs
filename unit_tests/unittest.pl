@@ -65,6 +65,9 @@ sub misc_test {
   test ("$CCS -f $t --setdlm x=y z=c",0);
 
   test ("$CCS -f $t --setmulticast 55",0);
+  test ("$CCS -f $t --setmulticast 57",0);
+  test ("$CCS -f $t --setmulticast",0);
+  test ("$CCS -f $t --setmulticast 55",0);
   test ("$CCS -f $t --setmulticast 56",0);
 
   test ("$CCS -f $t --setfencedaemon a=b b=c",0);
