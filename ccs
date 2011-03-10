@@ -59,6 +59,7 @@ def main(argv):
     addmethod = removemethod = createcluster = False
     addfencedev = removefencedev = False
     addfenceinst = removefenceinst = False
+    addunfenceinst = removeunfenceinst = False
     lsfencedev = lsfenceinst = False
     addfailoverdomain = removefailoverdomain = False
     lsfailoverdomain = addfailoverdomainnode = removefailoverdomainnode = False
@@ -84,7 +85,9 @@ def main(argv):
       "rmfailoverdomain=", "addservice=", "rmservice=", "addsubservice=", "rmsubservice=", "addresource=",
       "rmresource=", "setquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
       "setlogging", "addlogger","rmlogger","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
-      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate", "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm="])
+      "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
+      "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
+      "rmunfenceinst="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -138,6 +141,14 @@ def main(argv):
             options = args
         elif opt in ("--rmfenceinst"):
             removefenceinst = True
+            name = arg
+            options = args
+        elif opt in ("--addunfenceinst"):
+            addunfenceinst = True
+            name = arg
+            options = args
+        elif opt in ("--rmunfenceinst"):
+            removeunfenceinst = True
             name = arg
             options = args
         elif opt in ("--lsfencedev"): lsfencedev = True;
@@ -228,6 +239,8 @@ def main(argv):
     if (removefencedev): remove_fencedev(name)
     if (addfenceinst): add_fenceinst(name, options)
     if (removefenceinst): remove_fenceinst(name, options)
+    if (addunfenceinst): add_unfenceinst(name, options)
+    if (removeunfenceinst): remove_unfenceinst(name, options)
     if (lsfencedev): list_fencedev()
     if (lsfenceinst): list_fenceinst(options)
     if (lsfailoverdomain): list_failoverdomain()
@@ -327,6 +340,11 @@ Fencing Operations:
       --rmfenceinst <fence device name> <node> <method>
                         Remove all instances of the fence device listed from
                         the given method and node
+      --addunfenceinst <fence device name> <node> [options]
+                        Add an unfence instance
+      --rmunfenceinst <fence device name> <node>
+                        Remove all instances of the fence device listed from
+                        the unfence section of the node
 
 Failover Domain Operations:
       --lsfailoverdomain
@@ -865,6 +883,64 @@ def remove_fenceinst(name, options):
 
     if fenceinst_found == False:
         print "Fence instance '%s' for node '%s' in method '%s' does not exist in cluster.conf." % (name, nodename, methodname)
+        sys.exit(1)
+
+    set_cluster_conf(dom.toxml())
+
+def add_unfenceinst(name, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+    node_found = False
+    if len(options) < 1:
+        usage()
+        sys.exit(2)
+
+    nodename = options[0]
+
+    # Verify node exists
+    for node in dom.getElementsByTagName('clusternode'):
+        if node.getAttribute("name") == nodename:
+            node_found = True
+            break
+
+    if node_found == False:
+        print "Node '%s' does not currently exist in cluster.conf." % (nodename)
+        sys.exit(1)
+
+    if len(node.getElementsByTagName("unfence")) == 0:
+        unfence = dom.createElement("unfence")
+        node.appendChild(unfence)
+    else:
+        unfence = node.getElementsByTagName("unfence")[0]
+
+    newunfenceinst = dom.createElement("device")
+    newunfenceinst = set_element_attributes(newunfenceinst, options[1:])
+
+    newunfenceinst.setAttribute("name", name)
+    unfence.appendChild(newunfenceinst)
+    set_cluster_conf(dom.toxml())
+
+def remove_unfenceinst(name, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+    unfenceinst_found = False
+
+    if len(options) < 1:
+        usage()
+        sys.exit(2)
+
+    nodename = options[0]
+
+    # Verify unfence instance exists before attempting to remove
+    for node in dom.getElementsByTagName('clusternode'):
+        if node.getAttribute("name") == nodename:
+            for unfence in node.getElementsByTagName('unfence'):
+                for instance in unfence.getElementsByTagName('device'):
+                    if instance.getAttribute("name") == name:
+                        instance.parentNode.removeChild(instance)
+                        unfenceinst_found = True
+
+
+    if unfenceinst_found == False:
+        print "Unfence instance '%s' for node '%s' does not exist in cluster.conf." % (name, nodename)
         sys.exit(1)
 
     set_cluster_conf(dom.toxml())

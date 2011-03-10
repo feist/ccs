@@ -1,4 +1,4 @@
-<cluster config_version="19" name="mycluster">
+<cluster config_version="27" name="mycluster">
   <fence_daemon/>
   <clusternodes>
     <clusternode name="node1" nodeid="1">
@@ -8,6 +8,11 @@
         </method>
         <method name="node1method2"/>
       </fence>
+      <unfence>
+        <device name="myilo" port="15"/>
+        <device name="myilo" port="16"/>
+        <device name="myapc" port="17"/>
+      </unfence>
     </clusternode>
     <clusternode name="node2" nodeid="2">
       <fence>

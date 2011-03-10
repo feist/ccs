@@ -230,6 +230,19 @@ sub fence_test {
   test ("$CCS -f $t --addfenceinst fence_apc node1 badmethod port=1",1);
   test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",0);
   test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",1);
+  test ("$CCS -f $t --rmunfenceinst fence_ilo node1 node1method",1);
+  test ("$CCS -f $t --addunfenceinst myilo node1 port=10",0);
+  test ("$CCS -f $t --addunfenceinst myilo node1 port=11",0);
+  test ("$CCS -f $t --addunfenceinst myapc node1 port=12",0);
+  test ("$CCS -f $t --addunfenceinst myapc nodeX port=12",1);
+  test ("$CCS -f $t --rmunfenceinst myapc nodeX",1);
+  test ("$CCS -f $t --rmunfenceinst myilo nodeX",1);
+  test ("$CCS -f $t --rmunfenceinst myapc node1",0);
+  test ("$CCS -f $t --rmunfenceinst myilo node1",0);
+  test ("$CCS -f $t --addunfenceinst myilo node1 port=15",0);
+  test ("$CCS -f $t --addunfenceinst myilo node1 port=16",0);
+  test ("$CCS -f $t --addunfenceinst myapc node1 port=17",0);
+
   $retval = diff ($t,"$t.end");
   #`rm $t`;
   return $retval;
