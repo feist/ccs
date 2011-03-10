@@ -320,7 +320,7 @@ Node Operations:
       --rmnode <node>
                         Remove a node from the cluster
       --nodeid <nodeid> Specify nodeid when adding a node
-      --votes <votes>   Specify number of votes for a node
+      --votes <votes>   Specify number of votes when adding a node
 
 Fencing Operations:
       --lsfencedev      List all of the fence devices configured
@@ -335,7 +335,7 @@ Fencing Operations:
                         Add fence device
       --rmfencedev <fence device name>
                         Remove fence device
-      --addfenceinst <fence device name> <node> <method> <options>
+      --addfenceinst <fence device name> <node> <method> [options]
                         Add fence instance
       --rmfenceinst <fence device name> <node> <method>
                         Remove all instances of the fence device listed from

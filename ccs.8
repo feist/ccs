@@ -72,7 +72,7 @@ Remove a node from the cluster
 .IP "--nodeid <nodeid>
 Specify nodeid when adding a node
 .IP "--votes <votes>
-Specify number of votes for a node
+Specify number of votes when adding a node
 .SS "FENCING OPERATIONS"
 .IP "--lsfencedev
 List all of the fence devices configured
@@ -87,11 +87,16 @@ Remove a fence method from a specific node
 Add fence device
 .IP "--rmfencedev <fence device name>
 Remove fence device
-.IP "--addfenceinst <fence device name> <node> <method> <options>
+.IP "--addfenceinst <fence device name> <node> <method> [options]
 Add fence instance
 .IP "--rmfenceinst <fence device name> <node> <method>
 Remove all instances of the fence device listed from
 the given method and node
+.IP "--addunfenceinst <fence device name> <node> [options]
+Add an unfence instance
+.IP "--rmunfenceinst <fence device name> <node>
+Remove all instances of the fence device listed from
+the unfence section of the node
 .SS "FAILOVER DOMAIN OPERATIONS"
 .IP "--lsfailoverdomain
 Lists all of the failover domains and failover domain
