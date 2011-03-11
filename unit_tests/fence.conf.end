@@ -9,9 +9,9 @@
         <method name="node1method2"/>
       </fence>
       <unfence>
-        <device name="myilo" port="15"/>
-        <device name="myilo" port="16"/>
-        <device name="myapc" port="17"/>
+        <device name="fence_ilo" port="15"/>
+        <device name="fence_ilo" port="16"/>
+        <device name="fence_apc" port="17"/>
       </unfence>
     </clusternode>
     <clusternode name="node2" nodeid="2">
@@ -24,9 +24,9 @@
   </clusternodes>
   <cman/>
   <fencedevices>
-    <fencedevice agent="fence_ilo" name="fence_ilo" optiona="x" optionb="y"/>
-    <fencedevice agent="fence_apc" name="fence_apc" optiona="x" optionb="y"/>
-    <fencedevice agent="fence_apc" name="fence_apc2" optiona="x" optionb="y"/>
+    <fencedevice agent="fence_ilo" ipaddr="1.1.1.1" login="login" name="fence_ilo" passwd="password"/>
+    <fencedevice agent="fence_apc" ipaddr="2.2.2.2" login="login2" name="fence_apc" passwd="password2"/>
+    <fencedevice agent="fence_apc" ipaddr="3.3.3.3" login="login3" name="fence_apc2" passwd="password3"/>
   </fencedevices>
   <rm>
     <failoverdomains/>

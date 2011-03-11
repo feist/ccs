@@ -1,23 +1,18 @@
-<cluster config_version="27" name="mycluster">
-  <fence_daemon x="y" z="c"/>
+<cluster config_version="21" name="mycluster">
+  <fence_daemon override_time="c" post_fail_delay="y"/>
   <clusternodes>
     <clusternode name="node1" nodeid="1"/>
     <clusternode name="node2" nodeid="2"/>
   </clusternodes>
-  <cman x="y" z="c">
+  <cman expected_votes="9" two_node="2">
     <multicast addr="56"/>
   </cman>
   <fencedevices/>
-  <rm x="y" z="c">
+  <rm log_level="5">
     <failoverdomains/>
     <resources/>
   </rm>
-  <totem x="y" z="c"/>
-  <dlm x="y" z="c"/>
-  <logging x="y" z="c">
-    <logger mylog="1"/>
-    <logger mylog="2"/>
-    <logger mylog="3"/>
-    <logger mylog="5"/>
-  </logging>
+  <totem join="y" token="c"/>
+  <dlm enable_fencing="1" timewarn="4"/>
+  <logging syslog_facility="y" syslog_priority="c"/>
 </cluster>

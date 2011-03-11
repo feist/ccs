@@ -10,8 +10,8 @@
     <failoverdomains/>
     <resources/>
   </rm>
-  <quorumd options="AAA">
-    <heuristic options="YYY"/>
-    <heuristic options="CCC"/>
+  <quorumd device="AAA">
+    <heuristic program="YYY"/>
+    <heuristic program="CCC"/>
   </quorumd>
 </cluster>

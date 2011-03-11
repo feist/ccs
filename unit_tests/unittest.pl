@@ -4,38 +4,65 @@ $CCS = "../ccs";
 
 if (add_remove_test("addtest.conf") == 0) {
   print "Add/Remove Node Test Succeeded\n";
+} else {
+  print "Add/Remove Node Test FAILED\n";
+  exit 0;
 }
 
 if (ls_nodes_test("lsnodes.conf") == 0) {
   print "List Node Test Succeeded\n";
+} else {
+  print "List Node Test FAILED\n";
+  exit 0;
 }
 
 if (version_test("version.conf") == 0) {
   print "Version Test Succeeded\n";
+} else {
+  print "Version Test FAILED\n";
+  exit 0;
 }
 
 if (fence_test("fence.conf") == 0) {
   print "Fence Test Succeeded\n";
+} else {
+  print "Fence Test FAILED\n";
+  exit 0;
 }
 
 if (failover_test("failover.conf") == 0) {
   print "Failover Test Succeeded\n";
+} else {
+  print "Failover Test FAILED\n";
+  exit 0;
 }
 
 if (service_test("service.conf") == 0) {
   print "Service Test Succeeded\n";
+} else {
+  print "Service Test FAILED\n";
+  exit 0;
 }
 
 if (quorum_test("quorum.conf") == 0) {
   print "Quorum Test Succeeded\n";
+} else {
+  print "Quorum Test FAILED\n";
+  exit 0;
 }
 
 if (misc_test("misc.conf") == 0) {
   print "Misc Test Succeeded\n";
+} else {
+  print "Misc Test FAILED\n";
+  exit 0;
 }
 
 #if (expmode_test("exp.conf") == 0) {
 #  print "Expert Mode Test Succeeded\n";
+# else {
+#  print "Expert Mode Test FAILED\n";
+#exit 0;
 #}
 
 sub expmode_test {
@@ -50,19 +77,19 @@ sub misc_test {
   test ("$CCS -f $t --addnode node1",0);
   test ("$CCS -f $t --addnode node2",0);
 
-  test ("$CCS -f $t --settotem a=b b=c",0);
-  test ("$CCS -f $t --settotem x=y z=c",0);
+  test ("$CCS -f $t --settotem join=b token=c",0);
+  test ("$CCS -f $t --settotem join=y token=c",0);
 
-  test ("$CCS -f $t --setrm a=b b=c",0);
-  test ("$CCS -f $t --setrm x=y z=c",0);
+  test ("$CCS -f $t --setrm log_level=4",0);
+  test ("$CCS -f $t --setrm log_level=5",0);
 
-  test ("$CCS -f $t --setmulticast 53",0);
+  test ("$CCS -f $t --setmulticast 1.1.1.1",0);
 
-  test ("$CCS -f $t --setcman a=b b=c",0);
-  test ("$CCS -f $t --setcman x=y z=c",0);
+  test ("$CCS -f $t --setcman two_node=1 expected_votes=5",0);
+  test ("$CCS -f $t --setcman two_node=2 expected_votes=9",0);
 
-  test ("$CCS -f $t --setdlm a=b b=c",0);
-  test ("$CCS -f $t --setdlm x=y z=c",0);
+  test ("$CCS -f $t --setdlm log_debug=1",0);
+  test ("$CCS -f $t --setdlm timewarn=4 enable_fencing=1",0);
 
   test ("$CCS -f $t --setmulticast 55",0);
   test ("$CCS -f $t --setmulticast 57",0);
@@ -70,20 +97,20 @@ sub misc_test {
   test ("$CCS -f $t --setmulticast 55",0);
   test ("$CCS -f $t --setmulticast 56",0);
 
-  test ("$CCS -f $t --setfencedaemon a=b b=c",0);
-  test ("$CCS -f $t --setfencedaemon x=y z=c",0);
+  test ("$CCS -f $t --setfencedaemon post_join_delay=b override_path=c",0);
+  test ("$CCS -f $t --setfencedaemon post_fail_delay=y override_time=c",0);
 
-  test ("$CCS -f $t --setlogging a=b b=c",0);
-  test ("$CCS -f $t --setlogging x=y z=c",0);
+  test ("$CCS -f $t --setlogging to_syslog=b to_logfile=c",0);
+  test ("$CCS -f $t --setlogging syslog_facility=y syslog_priority=c",0);
 
-  test ("$CCS -f $t --addlogger mylog=1",0);
-  test ("$CCS -f $t --addlogger mylog=2",0);
-  test ("$CCS -f $t --addlogger mylog=3",0);
-  test ("$CCS -f $t --addlogger mylog=4",0);
-  test ("$CCS -f $t --addlogger mylog=5",0);
+#  test ("$CCS -f $t --addlogger mylog=1",0);
+#  test ("$CCS -f $t --addlogger mylog=2",0);
+#  test ("$CCS -f $t --addlogger mylog=3",0);
+#  test ("$CCS -f $t --addlogger mylog=4",0);
+#  test ("$CCS -f $t --addlogger mylog=5",0);
 
-  test ("$CCS -f $t --rmlogger mylog=4",0);
-  test ("$CCS -f $t --rmlogger mylog=4",1);
+#  test ("$CCS -f $t --rmlogger mylog=4",0);
+#  test ("$CCS -f $t --rmlogger mylog=4",1);
 
   $retval = diff ($t,"$t.end");
   #`rm $t`;
@@ -95,16 +122,16 @@ sub quorum_test {
   test ("$CCS -f $t --createcluster mycluster",0);
   test ("$CCS -f $t --addnode node1",0);
   test ("$CCS -f $t --addnode node2",0);
-  test ("$CCS -f $t --addheuristic options=TTT",0);
-  test ("$CCS -f $t --setquorumd options=XXX",0);
-  test ("$CCS -f $t --addheuristic options=YYY",0);
-  test ("$CCS -f $t --setquorumd options=AAA",0);
-  test ("$CCS -f $t --addheuristic options=BBB",0);
-  test ("$CCS -f $t --addheuristic options=CCC",0);
+  test ("$CCS -f $t --addheuristic program=TTT",0);
+  test ("$CCS -f $t --setquorumd device=XXX",0);
+  test ("$CCS -f $t --addheuristic program=YYY",0);
+  test ("$CCS -f $t --setquorumd device=AAA",0);
+  test ("$CCS -f $t --addheuristic program=BBB",0);
+  test ("$CCS -f $t --addheuristic program=CCC",0);
 
-  test ("$CCS -f $t --rmheuristic options=TTT",0);
-  test ("$CCS -f $t --rmheuristic options=TTT",1);
-  test ("$CCS -f $t --rmheuristic options=BBB",0);
+  test ("$CCS -f $t --rmheuristic program=TTT",0);
+  test ("$CCS -f $t --rmheuristic program=TTT",1);
+  test ("$CCS -f $t --rmheuristic program=BBB",0);
 
   $retval = diff ($t,"$t.end");
   #`rm $t`;
@@ -117,44 +144,44 @@ sub service_test {
   test ("$CCS -f $t --addnode node1",0);
   test ("$CCS -f $t --addnode node2",0);
   test ("$CCS -f $t --addservice service1",0);
-  test ("$CCS -f $t --addservice service2 a=b c=d",0);
-  test ("$CCS -f $t --addservice service2 a=b c=d",1);
+  test ("$CCS -f $t --addservice service2 domain=mydomain exclusive=1",0);
+  test ("$CCS -f $t --addservice service2 domain=mydomain exclusive=1",1);
   test ("$CCS -f $t --addservice service2",1);
-  test ("$CCS -f $t --addservice service3 a=b c=d",0);
+  test ("$CCS -f $t --addservice service3 domain=mydomain2 exclusive=0",0);
   test ("$CCS -f $t --rmservice service3",0);
-  test ("$CCS -f $t --addsubservice service1 nfs a=b c=1",0);
-  test ("$CCS -f $t --addsubservice service2 nfs a=b c=2",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs a=b c=3",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs a=b c=4",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[0]:nfs a=b c=5",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[1]:nfs a=b c=6",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[1]:nfs a=b c=6.1",0);
-  test ("$CCS -f $t --addsubservice service2 nfs a=b c=7",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[1]:nfs:nfs a=b c=8",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[1]:nfs:nfs a=b c=9",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[1]:nfs:nfs[1]:deep a=b c=11",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[1]:nfs[1]:nfs a=b c=10",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[1]:nfs[1]:nfs a=b c=12",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[1]:nfs[1]:nfs a=b c=13",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[0]:nfs a=b c=14",0);
-  test ("$CCS -f $t --addsubservice service2 nfs:nfs[0]:nfs[1]:nfs a=b c=15",0);
-  test ("$CCS -f $t --addsubservice service2 nfs a=b c=7",0);
-  test ("$CCS -f $t --addsubservice service2 nfs[1]:nfs a=b c=16",0);
-  test ("$CCS -f $t --addsubservice service2 nfs[2]:nfs a=b c=17",0);
+  test ("$CCS -f $t --addsubservice service1 nfsclient name=clientname target=host1 path=/mypath",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient name=clientname2 target=host2 path=/mypath2",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient name=b target=3",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient name=b target=4",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[0]:nfsclient name=b target=5",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[1]:nfsclient name=b target=6",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[1]:nfsclient name=b target=6.1",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient name=b target=7",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[1]:nfsclient:nfsclient name=b target=8",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[1]:nfsclient:nfsclient name=b target=9",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[1]:nfsclient:nfsclient[1]:nfsexport name=b device=11",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[1]:nfsclient[1]:nfsclient name=b target=10",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[1]:nfsclient[1]:nfsclient name=b target=12",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[1]:nfsclient[1]:nfsclient name=b target=13",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[0]:nfsclient name=b target=14",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient:nfsclient[0]:nfsclient[1]:nfsclient name=b target=15",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient name=b target=7",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient[1]:nfsclient name=b target=16",0);
+  test ("$CCS -f $t --addsubservice service2 nfsclient[2]:nfsclient name=b target=17",0);
 
-  test ("$CCS -f $t --rmsubservice service2 nfs:nfs[1]:nfs[1]:nfs[1]",0);
-  test ("$CCS -f $t --rmsubservice service2 nfs[2]:nfs",0);
-  test ("$CCS -f $t --rmsubservice service2 nfs[2]:nfs",1);
+  test ("$CCS -f $t --rmsubservice service2 nfsclient:nfsclient[1]:nfsclient[1]:nfsclient[1]",0);
+  test ("$CCS -f $t --rmsubservice service2 nfsclient[2]:nfsclient",0);
+  test ("$CCS -f $t --rmsubservice service2 nfsclient[2]:nfsclient",1);
 
-  test ("$CCS -f $t --addresource restype1 a=b b=1",0);
-  test ("$CCS -f $t --addresource restype2 a=b b=2",0);
-  test ("$CCS -f $t --addresource restype3 a=b b=3",0);
-  test ("$CCS -f $t --addresource restype3 a=b b=4",0);
-  test ("$CCS -f $t --addresource restype3 a=b b=5",0);
-  test ("$CCS -f $t --addresource restype3 a=b b=6",0);
+  test ("$CCS -f $t --addresource nfsexport name=b",0);
+  test ("$CCS -f $t --addresource nfsexport name=b",1);
+  test ("$CCS -f $t --addresource ip address=3",0);
+  test ("$CCS -f $t --addresource ip address=4",0);
+  test ("$CCS -f $t --addresource ip address=5",0);
+  test ("$CCS -f $t --addresource ip address=6",0);
 
-  test ("$CCS -f $t --rmresource restype3 a=b b=3",0);
-  test ("$CCS -f $t --rmresource restype3 a=b b=5",0);
+  test ("$CCS -f $t --rmresource ip address=3",0);
+  test ("$CCS -f $t --rmresource ip address=5",0);
 
 
   $retval = diff ($t,"$t.end");
@@ -217,10 +244,10 @@ sub fence_test {
   test ("$CCS -f $t --addmethod node2method3 node2",0);
   test ("$CCS -f $t --rmmethod node1method3 node1",0);
   test ("$CCS -f $t --rmmethod node1methodX node1",1);
-  test ("$CCS -f $t --addfencedev fence_ilo agent=fence_ilo optiona=x optionb=y",0);
-  test ("$CCS -f $t --addfencedev fence_apc agent=fence_apc optiona=x optionb=y",0);
-  test ("$CCS -f $t --addfencedev fence_apc2 agent=fence_apc optiona=x optionb=y",0);
-  test ("$CCS -f $t --addfencedev fence_apcX agent=fence_apc optiona=x optionb=y",0);
+  test ("$CCS -f $t --addfencedev fence_ilo agent=fence_ilo ipaddr=1.1.1.1 login=login passwd=password",0);
+  test ("$CCS -f $t --addfencedev fence_apc agent=fence_apc ipaddr=2.2.2.2 login=login2 passwd=password2",0);
+  test ("$CCS -f $t --addfencedev fence_apc2 agent=fence_apc ipaddr=3.3.3.3 login=login3 passwd=password3",0);
+  test ("$CCS -f $t --addfencedev fence_apcX agent=fence_apc ipaddr=4.4.4.4 login=login4 passwd=password4",0);
   test ("$CCS -f $t --rmfencedev fence_apcX",0);
   test ("$CCS -f $t --rmfencedev fence_apcX",1);
   test ("$CCS -f $t --addfenceinst fence_apcX node1 node1method",1);
@@ -231,17 +258,17 @@ sub fence_test {
   test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",0);
   test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",1);
   test ("$CCS -f $t --rmunfenceinst fence_ilo node1 node1method",1);
-  test ("$CCS -f $t --addunfenceinst myilo node1 port=10",0);
-  test ("$CCS -f $t --addunfenceinst myilo node1 port=11",0);
-  test ("$CCS -f $t --addunfenceinst myapc node1 port=12",0);
-  test ("$CCS -f $t --addunfenceinst myapc nodeX port=12",1);
-  test ("$CCS -f $t --rmunfenceinst myapc nodeX",1);
-  test ("$CCS -f $t --rmunfenceinst myilo nodeX",1);
-  test ("$CCS -f $t --rmunfenceinst myapc node1",0);
-  test ("$CCS -f $t --rmunfenceinst myilo node1",0);
-  test ("$CCS -f $t --addunfenceinst myilo node1 port=15",0);
-  test ("$CCS -f $t --addunfenceinst myilo node1 port=16",0);
-  test ("$CCS -f $t --addunfenceinst myapc node1 port=17",0);
+  test ("$CCS -f $t --addunfenceinst fence_ilo node1 port=10",0);
+  test ("$CCS -f $t --addunfenceinst fence_ilo node1 port=11",0);
+  test ("$CCS -f $t --addunfenceinst fence_apc node1 port=12",0);
+  test ("$CCS -f $t --addunfenceinst fence_apc nodeX port=12",1);
+  test ("$CCS -f $t --rmunfenceinst fence_apc nodeX",1);
+  test ("$CCS -f $t --rmunfenceinst fence_ilo nodeX",1);
+  test ("$CCS -f $t --rmunfenceinst fence_apc node1",0);
+  test ("$CCS -f $t --rmunfenceinst fence_ilo node1",0);
+  test ("$CCS -f $t --addunfenceinst fence_ilo node1 port=15",0);
+  test ("$CCS -f $t --addunfenceinst fence_ilo node1 port=16",0);
+  test ("$CCS -f $t --addunfenceinst fence_apc node1 port=17",0);
 
   $retval = diff ($t,"$t.end");
   #`rm $t`;

@@ -11,6 +11,7 @@ import threading
 import time, random
 from Queue import Queue
 import getpass
+import subprocess
 
 RICCI_PORT = 11111
 CLUSTERRNG = "cluster.rng.in"
@@ -22,6 +23,7 @@ usefile = False
 hostname = False
 filename = False
 activate = False
+verifyconf = True
 
 class StopNodeThread (threading.Thread):
     def __init__ (self, host):
@@ -76,9 +78,10 @@ def main(argv):
     exp = exprm = False
 
     global password, debug, sync, hostname, usefile, filename, activate
+    global verifyconf
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
-        opts, args = getopt.getopt(argv, "dsh:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
+        opts, args = getopt.getopt(argv, "dsih:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
       "lsservices", "listdomains", "addnode=", "rmnode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "rmmethod=", "addfencedev=", "rmfencedev=",
       "addfenceinst=", "rmfenceinst=", "lsfencedev", "lsfenceinst", "sync", "addfailoverdomain=",
@@ -87,7 +90,7 @@ def main(argv):
       "setlogging", "addlogger","rmlogger","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
-      "rmunfenceinst="])
+      "rmunfenceinst=","ignore"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -100,6 +103,8 @@ def main(argv):
             usefile = True
             filename = arg
             logging.debug("Filename = %s" % filename)
+        elif opt in ("--ignore","-i"):
+            verifyconf = False
         elif opt in ("--password", "-p"): passwordset = True ; password = arg
         elif opt in ("--getconf"): getconf = True
         elif opt in ("--checkconf"): checkconf = True
@@ -209,8 +214,8 @@ def main(argv):
         elif opt in ("--nodeid"): nodeid = arg
         elif opt in ("--votes"): votes = arg
         elif opt in ("-d"): debug = True
-      	elif opt in ("--exp"): exp = True; tag = arg; options = args
-      	elif opt in ("--exprm"): exprm = True; location = arg
+        elif opt in ("--exp"): exp = True; tag = arg; options = args
+        elif opt in ("--exprm"): exprm = True; location = arg
 
     if not hostname and not filename:
         print "Must specify a hostname or filename."
@@ -279,6 +284,7 @@ Cluster configuration system.
       --help            Display this help and exit
   -h, --host host       Cluster node to perform actions on
   -f, --file file       File to perform actions on
+  -i, --ignore          Ignore validation errors in cluster.conf file
   -p, --password        Ricci user password for node running ricci
       --getconf         Print current cluster.conf file
       --setconf         Use the file specified by '-f' to send to the host
@@ -667,6 +673,11 @@ def get_cluster_conf_xml():
             sys.exit(1)
     else:
         xml = send_ricci_command("cluster", "get_cluster.conf")
+
+    if verifyconf:
+      if verify_cluster_conf(xml) != 0:
+            print "Cluster.conf file specified is not a valid cluster.conf file (use -i to ignore this error)"
+            sys.exit(1)
 
     dom = minidom.parseString(xml)
     if dom.getElementsByTagName('cluster').length > 0:
@@ -1736,6 +1747,11 @@ def set_cluster_conf(xml, increment = True):
     xml = xml.replace('<?xml version="1.0" ?>','')
     log_msg (xml)
 
+    if verifyconf:
+        if verify_cluster_conf(xml) != 0:
+            print "Validation Failure, unable to modify configuration file (use -i to ignore this error)."
+            sys.exit(1)
+
     if usefile:
         xml = dom.toprettyxml("  ","\n")
         xml = xml.replace('<?xml version="1.0" ?>','')
@@ -1748,6 +1764,15 @@ def set_cluster_conf(xml, increment = True):
             log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("propagate", "boolean", "true"),("cluster.conf","xml","",xml)))
         else:
             log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("cluster.conf","xml","",xml)))
+
+# Returns 0 if verification succeeded, an error code if it didn't
+def verify_cluster_conf(xml):
+    lint = subprocess.Popen(["/usr/bin/xmllint","--noout","--relaxng",
+        "/usr/share/cluster/cluster.rng", "-"], stdin=subprocess.PIPE,
+        stderr=subprocess.STDOUT, stdout = subprocess.PIPE)
+    lint.communicate(xml)
+    ret = lint.wait()
+    return ret
 
 def check_cluster_conf():
     global hostname, usefile
