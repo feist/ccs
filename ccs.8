@@ -20,6 +20,8 @@ Display this help and exit
 Cluster node to perform actions on
 .IP "-f, --file file"
 File to perform actions on
+.IP "-i, --ignore"
+Ignore validation errors in cluster.conf file
 .IP "-p, --password"
 Ricci user password for node running ricci
 .IP "--getconf"
@@ -126,7 +128,7 @@ Add individual sub services, if adding services within
 a tree, use ':' to separate elements and brackets to
 identify subservices of the same type.
 .br
-Example: --addsubservice service_a nfs[1]:nfs[2]:nfs
+Example: --addsubservice service_a nfsclient[1]:nfsclient[2]:nfsclient
 .IP "--rmsubservice <servicename> <subservice>
 Removes a specific subservice specified by the
 subservice, using ':' to separate elements and
