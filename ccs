@@ -14,7 +14,7 @@ import getpass
 import subprocess
 
 RICCI_PORT = 11111
-CLUSTERRNG = "cluster.rng.in"
+CLUSTERRNG = "/usr/share/ccs/cluster.rng"
 
 password = None
 debug = False
@@ -674,16 +674,15 @@ def get_cluster_conf_xml():
     else:
         xml = send_ricci_command("cluster", "get_cluster.conf")
 
-    if verifyconf:
-      if verify_cluster_conf(xml) != 0:
-            print "Cluster.conf file specified is not a valid cluster.conf file (use -i to ignore this error)"
-            sys.exit(1)
-
     dom = minidom.parseString(xml)
     if dom.getElementsByTagName('cluster').length > 0:
-      return dom.getElementsByTagName('cluster')[0].toxml()
+        xml =  dom.getElementsByTagName('cluster')[0].toxml()
+        if verifyconf and verify_cluster_conf(xml) != 0:
+            print "Cluster.conf file specified is not a valid cluster.conf file (use -i to ignore this error)"
+            sys.exit(1)
+        return xml
     else:
-      return empty_cluster_conf()
+        return empty_cluster_conf()
 
 # Create a minimal cluster.conf file similiar to the one
 # created by system-config-cluster
@@ -1767,8 +1766,12 @@ def set_cluster_conf(xml, increment = True):
 
 # Returns 0 if verification succeeded, an error code if it didn't
 def verify_cluster_conf(xml):
+    if (not os.path.isfile(CLUSTERRNG)):
+        print "%s is missing, unable to validate (use -i to ignore this error)" % CLUSTERRNG
+        sys.exit(1)
+
     lint = subprocess.Popen(["/usr/bin/xmllint","--noout","--relaxng",
-        "/usr/share/ccs/cluster.rng", "-"], stdin=subprocess.PIPE,
+        CLUSTERRNG, "-"], stdin=subprocess.PIPE,
         stderr=subprocess.STDOUT, stdout = subprocess.PIPE)
     lint.communicate(xml)
     ret = lint.wait()
