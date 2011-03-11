@@ -1768,7 +1768,7 @@ def set_cluster_conf(xml, increment = True):
 # Returns 0 if verification succeeded, an error code if it didn't
 def verify_cluster_conf(xml):
     lint = subprocess.Popen(["/usr/bin/xmllint","--noout","--relaxng",
-        "/usr/share/cluster/cluster.rng", "-"], stdin=subprocess.PIPE,
+        "/usr/share/ccs/cluster.rng", "-"], stdin=subprocess.PIPE,
         stderr=subprocess.STDOUT, stdout = subprocess.PIPE)
     lint.communicate(xml)
     ret = lint.wait()

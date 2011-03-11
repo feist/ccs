@@ -13,6 +13,8 @@ tarball:
 
 install:
 	install ccs ${DESTDIR}/${SBINDIR}/ccs
+	install -d ${DESTDIR}/usr/share/ccs/
+	install cluster.rng.in ${DESTDIR}/usr/share/ccs/cluster.rng
 	install -d ${DESTDIR}/${MANDIR}/man8
 	install ccs.8 ${DESTDIR}/${MANDIR}/man8
 
