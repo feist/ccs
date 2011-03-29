@@ -1792,7 +1792,7 @@ def check_cluster_conf():
         xml2 = get_cluster_conf_xml()
         if xml2 != xml:
             print "Node: %s does not match" % hostname
-            bad_nodes << hostname
+            bad_nodes.append(hostname)
 
     hostname = orig_hostname
     if len(bad_nodes) > 0:
