@@ -1235,6 +1235,10 @@ def remove_subservice(name, options):
     dom = minidom.parseString(get_cluster_conf_xml())
     serviceFound = False
 
+    if len(options) != 1:
+        usage() 
+        sys.exit(1)
+
     location = options.pop(0)
 
     # Verify that the service exists
