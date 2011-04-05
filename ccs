@@ -539,8 +539,23 @@ def get_cluster_conf():
     print xml
 
 def get_cluster_status():
+    if usefile:
+        print "Error: Can't get status on a local file"
+        sys.exit(1)
+
     xml = send_ricci_command("cluster","status")
-    xml = minidom.parseString(xml).getElementsByTagName('cluster')[0].toprettyxml(indent='  ',newl='')
+    xml = minidom.parseString(xml)
+
+    found_error = False
+    if (len(xml.getElementsByTagName('cluster')) < 1):
+        for var in xml.getElementsByTagName('var'):
+            if var.getAttribute("name") == "error_description":
+                print "Error: %s" % var.getAttribute("value")
+                found_error = True
+        if not found_error:        
+            print "Error: Did not receive valid status back"
+        sys.exit(1)
+    xml = xml.getElementsByTagName('cluster')[0].toprettyxml(indent='  ',newl='')
     print xml
 
 def sync_cluster_conf():
