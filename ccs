@@ -95,6 +95,7 @@ def main(argv):
         usage()
         sys.exit(2)
     for opt, arg in opts:
+        if arg == "--help": usage() ; sys.exit()
         if opt == ("--help"): usage() ; sys.exit()
         elif opt in ("--host","-h"):
             hostname = arg
