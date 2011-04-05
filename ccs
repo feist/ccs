@@ -90,7 +90,7 @@ def main(argv):
       "setlogging", "addlogger","rmlogger","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
-      "rmunfenceinst=","ignore"])
+      "rmunfenceinst=","ignore", "debug"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -213,7 +213,7 @@ def main(argv):
         elif opt in ("--setmulticast"): setmulticast = True; options = args
         elif opt in ("--nodeid"): nodeid = arg
         elif opt in ("--votes"): votes = arg
-        elif opt in ("-d"): debug = True
+        elif opt in ("-d","--debug"): debug = True
         elif opt in ("--exp"): exp = True; tag = arg; options = args
         elif opt in ("--exprm"): exprm = True; location = arg
 
@@ -298,7 +298,7 @@ Cluster configuration system.
       --sync            Sync config file to all nodes
       --activate        Activate config on node (use this option with --sync
                         to activate config on all nodes)
-      --debug           Display debugging information to help troubleshoot
+  -d, --debug           Display debugging information to help troubleshoot
                         connection issues with ricci
       --exp tag [location] [options]
                         Expert mode to add elements not currently defined in
