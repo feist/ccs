@@ -314,11 +314,14 @@ Cluster Operations:
       --getversion      Get the current cluster.conf version
       --setversion <n>  Set the cluster.conf version
       --incversion      Increment the cluster.conf version by 1
-                        scp and put them in the current directory
-      --startall        Start cluster services on all nodes
-      --stopall         Stop cluster services on all nodes
+      --startall        Start cluster services on all nodes (and chkconfig
+                                                            services on)
+      --stopall         Stop cluster services on all nodes (and chkconfig
+                                                            services off)
       --start           Start cluster services on host specified with -h
+                                            (and chkconfig services on)
       --stop            Stop cluster services on host specified with -h
+                                            (and chkconfig services off)
 
 Node Operations:
       --lsnodes         List all nodes in the cluster

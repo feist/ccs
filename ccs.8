@@ -55,15 +55,14 @@ Get the current cluster.conf version
 Set the cluster.conf version
 .IP "--incversion
 Increment the cluster.conf version by 1
-scp and put them in the current directory
 .IP "--startall
-Start cluster services on all nodes
+Start cluster services on all nodes (and chkconfig services on)
 .IP "--stopall
-Stop cluster services on all nodes
+Stop cluster services on all nodes (and chkconfig services off)
 .IP "--start
-Start cluster services on host specified with -h
+Start cluster services on host specified with -h (and chkconfig services on)
 .IP "--stop
-Stop cluster services on host specified with -h
+Stop cluster services on host specified with -h (and chkconfig services off)
 .SS "NODE OPERATIONS"
 .IP "--lsnodes
 List all nodes in the cluster
