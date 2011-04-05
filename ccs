@@ -341,11 +341,15 @@ Fencing Operations:
       --rmmethod <method> <node>
                         Remove a fence method from a specific node
       --addfencedev <device name> [fence device options]
-                        Add fence device
+                        Add fence device. Fence devices and parameters can be
+                        found in online documentation in 'Fence Device
+                        Parameters'
       --rmfencedev <fence device name>
                         Remove fence device
       --addfenceinst <fence device name> <node> <method> [options]
-                        Add fence instance
+                        Add fence instance. Fence instance parameters can be
+                        found in online documentation in 'Fence Device
+                        Parameters'
       --rmfenceinst <fence device name> <node> <method>
                         Remove all instances of the fence device listed from
                         the given method and node
@@ -372,7 +376,9 @@ Service Operations:
       --lsservices      List currently configured services and resources in
                         the cluster
       --addresource <resource type> [resource options] ...
-                        Add resources to the cluster
+                        Add global cluster resources to the cluster
+                        Resource types and variables can be found in the
+                        online documentation under 'HA Resource Parameters'
       --rmresource <resource type> [resource options]
                         Remove specified resource with resource options
       --addservice <servicename> [service options] ...
@@ -380,15 +386,28 @@ Service Operations:
       --rmservice <servicename>
                         Removes a service and all of its subservices
       --addsubservice <servicename> <subservice> [service options] ...
-                        Add individual sub services, if adding services within
-                        a tree, use ':' to separate elements and brackets to
-                        identify subservices of the same type
-                        Example: --addsubservice service_a nfs[1]:nfs[2]:nfs
+                        Add individual subservices, if adding child services,
+                        use ':' to separate parent and child subservices
+                        and brackets to identify subservices of the same type
+
+                        Subservice types and variables can be found in the
+                        online documentation in 'HA Resource Parameters'
+
+                        To add a nfsclient subservice as a child of the 2nd
+                        nfsclient subservice in the 'service_a' service use
+                        the following example: --addsubservice service_a \\
+                                               nfsclient[1]:nfsclient \\
+                                               ref=/test
       --rmsubservice <servicename> <subservice>
                         Removes a specific subservice specified by the
                         subservice, using ':' to separate elements and
                         brackets to identify between subservices of the
                         same type.
+                        To remove the 1st nfsclient child subservice
+                        of the 2nd nfsclient subservice in the 'service_a'
+                        service, use the following example:
+                                            --rmsubservice service_a \\
+                                            nfsclient[1]:nfsclient
 
 Quorum Operations:
       --lsquorum        List quorum options and heuristics
