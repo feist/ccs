@@ -360,7 +360,7 @@ Failover Domain Operations:
                         Add failover domain
       --rmfailoverdomain <name>
                         Remove failover domain
-      --addfailoverdomainnode <failover domain> <node> [priority=xx]
+      --addfailoverdomainnode <failover domain> <node> [priority]
                         Add node to given failover domain
       --rmfailoverdomainnode <failover domain> <node>
                         Remove node from failover domain
