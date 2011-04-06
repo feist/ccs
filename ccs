@@ -69,7 +69,7 @@ def main(argv):
     removeservice = removesubservice = removeresource = False
     listquorum = setquorumd = addheuristic = removeheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
-    setlogging = addlogger = removelogger = False
+    setlogging = addlogging = removelogging = False
     listmisc = False
     setdlm = setmulticast = False
     passwordset = False
@@ -87,7 +87,7 @@ def main(argv):
       "addfenceinst=", "rmfenceinst=", "lsfencedev", "lsfenceinst", "sync", "addfailoverdomain=",
       "rmfailoverdomain=", "addservice=", "rmservice=", "addsubservice=", "rmsubservice=", "addresource=",
       "rmresource=", "setquorumd","addheuristic","settotem", "setrm", "setcman", "setfencedaemon",
-      "setlogging", "addlogger","rmlogger","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
+      "setlogging", "addlogging","rmlogging","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
       "rmunfenceinst=","ignore", "debug"])
@@ -209,8 +209,8 @@ def main(argv):
         elif opt in ("--setdlm"): setdlm = True; options = args
         elif opt in ("--setfencedaemon"): setfencedaemon = True; options = args
         elif opt in ("--setlogging"): setlogging = True; options = args
-        elif opt in ("--addlogger"): addlogger = True; options = args
-        elif opt in ("--rmlogger"): removelogger = True; options = args
+        elif opt in ("--addlogging"): addlogging = True; options = args
+        elif opt in ("--rmlogging"): removelogging = True; options = args
         elif opt in ("--setmulticast"): setmulticast = True; options = args
         elif opt in ("--nodeid"): nodeid = arg
         elif opt in ("--votes"): votes = arg
@@ -271,8 +271,8 @@ def main(argv):
     if (setdlm): set_dlm(options)
     if (setfencedaemon): set_fencedaemon(options)
     if (setlogging): set_logging(options)
-    if (addlogger): add_logger(options)
-    if (removelogger): remove_logger(options)
+    if (addlogging): add_logging_daemon(options)
+    if (removelogging): remove_logging_daemon(options)
     if (setmulticast): set_multicast(options)
     if (exp): expert_mode(tag, options)
     if (exprm): expert_mode_remove(location)
@@ -436,10 +436,10 @@ Misc Options
                         Set fence daemon options
       --setlogging [logging options]
                         Set logging options
-      --addlogger [logger options]
-                        Add a logger
-      --rmlogger [logger options]
-                        Remove a logger
+      --addlogging [logging_daemon options]
+                        Add a logging daemon (see cluster.conf for options)
+      --rmlogging [logging_daemon options]
+                        Remove the logging daemon with specified options
   """
 
 def stop_node(node, inthread=False):
@@ -1537,7 +1537,7 @@ def list_misc():
     list_tag(dom, "multicast", "Multicast")
     list_tag(dom, "fencedaemon", "Fence Daemon")
     list_tag(dom, "logging", "Logging")
-    list_tag(dom, "logger", "  logger")
+    list_tag(dom, "logging_daemon", "  Logging Daemons")
 
 def set_totem(options):
     dom = minidom.parseString(get_cluster_conf_xml())
@@ -1648,7 +1648,7 @@ def set_logging(options):
     logging = set_element_attributes(logging, options)
     set_cluster_conf(dom.toxml())
 
-def add_logger(options):
+def add_logging_daemon(options):
     dom = minidom.parseString(get_cluster_conf_xml())
 
     logging = dom.getElementsByTagName('logging')
@@ -1660,13 +1660,13 @@ def add_logger(options):
     else:
         logging = logging[0]
 
-    logger = dom.createElement("logger")
+    logger = dom.createElement("logging_daemon")
     logger = set_element_attributes(logger, options)
 
     logging.appendChild(logger)
     set_cluster_conf(dom.toxml())
 
-def remove_logger(options):
+def remove_logging_daemon(options):
     dom = minidom.parseString(get_cluster_conf_xml())
     loggerMatch = False
 

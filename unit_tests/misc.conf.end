@@ -1,4 +1,4 @@
-<cluster config_version="21" name="mycluster">
+<cluster config_version="26" name="mycluster">
   <fence_daemon override_time="c" post_fail_delay="y"/>
   <clusternodes>
     <clusternode name="node1" nodeid="1"/>
@@ -14,5 +14,9 @@
   </rm>
   <totem join="y" token="c"/>
   <dlm enable_fencing="1" timewarn="4"/>
-  <logging syslog_facility="y" syslog_priority="c"/>
+  <logging syslog_facility="y" syslog_priority="c">
+    <logging_daemon name="1" to_logfile="1"/>
+    <logging_daemon name="3" to_logfile="3"/>
+    <logging_daemon name="5" to_logfile="5"/>
+  </logging>
 </cluster>

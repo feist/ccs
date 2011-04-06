@@ -51,6 +51,7 @@ if (quorum_test("quorum.conf") == 0) {
   exit 0;
 }
 
+
 if (misc_test("misc.conf") == 0) {
   print "Misc Test Succeeded\n";
 } else {
@@ -103,14 +104,14 @@ sub misc_test {
   test ("$CCS -f $t --setlogging to_syslog=b to_logfile=c",0);
   test ("$CCS -f $t --setlogging syslog_facility=y syslog_priority=c",0);
 
-#  test ("$CCS -f $t --addlogger mylog=1",0);
-#  test ("$CCS -f $t --addlogger mylog=2",0);
-#  test ("$CCS -f $t --addlogger mylog=3",0);
-#  test ("$CCS -f $t --addlogger mylog=4",0);
-#  test ("$CCS -f $t --addlogger mylog=5",0);
+  test ("$CCS -f $t --addlogging name=1 to_logfile=1",0);
+  test ("$CCS -f $t --addlogging name=2 loc=2",1);
+  test ("$CCS -f $t --addlogging name=3 to_logfile=3",0);
+  test ("$CCS -f $t --addlogging name=4 to_logfile=4",0);
+  test ("$CCS -f $t --addlogging name=5 to_logfile=5",0);
 
-#  test ("$CCS -f $t --rmlogger mylog=4",0);
-#  test ("$CCS -f $t --rmlogger mylog=4",1);
+  test ("$CCS -f $t --rmlogging name=4",0);
+  test ("$CCS -f $t --rmlogging name=4",1);
 
   $retval = diff ($t,"$t.end");
   #`rm $t`;
