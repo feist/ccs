@@ -1895,7 +1895,13 @@ def send_to_ricci(msg, host=hostname):
     cert = os.path.expanduser("~/.ccs/cacert.pem")
     key = os.path.expanduser("~/.ccs/privkey.pem")
     config = os.path.expanduser("~/.ccs/cacert.config")
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        (family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(host, RICCI_PORT)[0]
+    except socket.gaierror:
+        print "Unable to resolve %s, does that host exist?" % host
+        sys.exit(1)
+    
+    s = socket.socket(family, socktype, proto)
 
     # Make sure we have a client certificate and private key
     # If not we need to autogenerate them (including creating an
