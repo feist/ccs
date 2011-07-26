@@ -70,6 +70,7 @@ def main(argv):
     listquorum = setquorumd = addheuristic = removeheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
     setlogging = addlogging = removelogging = False
+    addvm = removevm = False
     listmisc = False
     setdlm = setmulticast = False
     passwordset = False
@@ -90,7 +91,7 @@ def main(argv):
       "setlogging", "addlogging","rmlogging","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
-      "rmunfenceinst=","ignore", "debug"])
+      "rmunfenceinst=","addvm=","rmvm=", "ignore", "debug"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -198,6 +199,13 @@ def main(argv):
             removeresource = True
             name = arg
             options = args
+        elif opt in ("--addvm"):
+            addvm = True
+            name = arg
+            options = args
+        elif opt in ("--rmvm"):
+            removevm = True
+            name = arg
         elif opt in ("--lsquorumd"): listquorum = True
         elif opt in ("--setquorumd"): setquorumd = True; options = args
         elif opt in ("--addheuristic"): addheuristic = True; options = args
@@ -260,6 +268,8 @@ def main(argv):
     if (removesubservice): remove_subservice(name, options)
     if (addresource): add_resource(name, options)
     if (removeresource): remove_resource(name, options)
+    if (addvm): add_vm(name,options)
+    if (removevm): remove_vm(name)
     if (listquorum): list_quorum()
     if (setquorumd): set_quorumd(options)
     if (addheuristic): add_heuristic(options)
@@ -1431,6 +1441,59 @@ def remove_resource(type, options):
 
     resources.removeChild(resource)
             
+    set_cluster_conf(dom.toxml())
+
+def add_vm(vmname, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    # Verify rm section exists in cluster.conf
+    rm = dom.getElementsByTagName('rm')
+    if len(rm) == 0:
+        rm = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("rm"))
+    elif len(rm) > 1:
+        print "Error: Too many rm elements in cluster.conf"
+        sys.exit(1)
+    else:
+        rm = rm[0]
+
+    # Verify name is unique, if no name then we don't search for duplicates
+    if rm != False:
+        for vm in rm.childNodes:
+            if vm.nodeType == minidom.Node.TEXT_NODE:
+                continue
+            if vm.getAttribute("name") == vmname:
+                print "Duplicate name: %s" % vmname
+                sys.exit(1)
+
+    newvm = dom.createElement("vm")
+    newvm = set_element_attributes(newvm, options)
+    newvm.setAttribute("name", vmname)
+
+    rm = dom.getElementsByTagName('rm')[0]
+    rm.appendChild(newvm)
+    set_cluster_conf(dom.toxml())
+
+def remove_vm(name):
+    vmRemoved = False
+
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    rm = dom.getElementsByTagName("rm")
+    if len(rm) > 0:
+        rm = rm[0]
+        vms = rm.getElementsByTagName("vm")
+        for vm in vms:
+            if vm.getAttribute("name") == name:
+                rm.removeChild(vm)
+                vmRemoved = True
+    else:
+        print "No <rm> section in cluster.conf"
+        sys.exit(1)
+
+    if not vmRemoved:
+        print "Unable to find virtual machine: %s" % name
+        sys.exit(1)
+
     set_cluster_conf(dom.toxml())
 
 def list_quorum():
