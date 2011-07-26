@@ -396,6 +396,10 @@ Service Operations:
                         Add service to cluster
       --rmservice <servicename>
                         Removes a service and all of its subservices
+      --addvm <virtual machine name> [vm options] ...
+                        Add a virtual machine to the cluster
+      --rmvm <virtual machine name>
+                        Removes named virtual machine from the cluster
       --addsubservice <servicename> <subservice> [service options] ...
                         Add individual subservices, if adding child services,
                         use ':' to separate parent and child subservices
