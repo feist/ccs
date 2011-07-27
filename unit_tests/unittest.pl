@@ -184,6 +184,14 @@ sub service_test {
   test ("$CCS -f $t --rmresource ip address=3",0);
   test ("$CCS -f $t --rmresource ip address=5",0);
 
+  test ("$CCS -f $t --addvm vmname1 a=b",1);
+  test ("$CCS -f $t --addvm vmname1 autostart=0 migrate=live",0);
+  test ("$CCS -f $t --addvm vmname2 autostart=1 migrate=live",0);
+  test ("$CCS -f $t --addvm vmname3 autostart=0 migrate=live",0);
+  test ("$CCS -f $t --addvm vmname1 autostart=0 migrate=live",1);
+  test ("$CCS -f $t --rmvm vmname1",0);
+  test ("$CCS -f $t --addvm vmname1 autostart=1 migrate=live",0);
+
 
   $retval = diff ($t,"$t.end");
   #`rm $t`;
