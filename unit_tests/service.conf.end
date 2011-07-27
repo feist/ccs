@@ -1,4 +1,4 @@
-<cluster config_version="35" name="mycluster">
+<cluster config_version="40" name="mycluster">
   <fence_daemon/>
   <clusternodes>
     <clusternode name="node1" nodeid="1"/>
@@ -43,5 +43,8 @@
       <nfsclient name="b" target="7">
       </nfsclient>
     </service>
+    <vm autostart="1" migrate="live" name="vmname2"/>
+    <vm autostart="0" migrate="live" name="vmname3"/>
+    <vm autostart="1" migrate="live" name="vmname1"/>
   </rm>
 </cluster>
