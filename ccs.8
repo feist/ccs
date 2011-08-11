@@ -75,6 +75,10 @@ Specify nodeid when adding a node
 .IP "--votes <votes>
 Specify number of votes when adding a node
 .SS "FENCING OPERATIONS"
+.IP "--lsfenceopts [fence type]
+List available fence devices.  If a fence type is
+specified, then list options for the specified
+fence type
 .IP "--lsfencedev
 List all of the fence devices configured
 .IP "--lsfenceinst [<node>]
@@ -111,6 +115,10 @@ Add node to given failover domain
 .IP "--rmfailoverdomainnode <failover domain> <node>
 Remove node from failover domain
 .SS "SERVICE OPERATIONS"
+.IP "--lsserviceopts [service type]
+List available services.  If a service type is
+specified, then list options for the specified
+service type
 .IP "--lsservices
 List currently configured services and resources in
 the cluster

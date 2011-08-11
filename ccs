@@ -77,6 +77,7 @@ def main(argv):
     nodeid = votes = False
     checkconf = False
     exp = exprm = False
+    lsfenceopts = lsserviceopts = False
 
     global password, debug, sync, hostname, usefile, filename, activate
     global verifyconf
@@ -91,7 +92,7 @@ def main(argv):
       "setlogging", "addlogging","rmlogging","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
-      "rmunfenceinst=","addvm=","rmvm=", "ignore", "debug"])
+      "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "ignore", "debug"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -206,6 +207,12 @@ def main(argv):
         elif opt in ("--rmvm"):
             removevm = True
             name = arg
+        elif opt in ("--lsserviceopts"):
+            lsserviceopts = True
+            options = args
+        elif opt in ("--lsfenceopts"):
+            lsfenceopts = True
+            options = args
         elif opt in ("--lsquorumd"): listquorum = True
         elif opt in ("--setquorumd"): setquorumd = True; options = args
         elif opt in ("--addheuristic"): addheuristic = True; options = args
@@ -270,6 +277,8 @@ def main(argv):
     if (removeresource): remove_resource(name, options)
     if (addvm): add_vm(name,options)
     if (removevm): remove_vm(name)
+    if (lsserviceopts): list_serviceopts(options)
+    if (lsfenceopts): list_fenceopts(options)
     if (listquorum): list_quorum()
     if (setquorumd): set_quorumd(options)
     if (addheuristic): add_heuristic(options)
@@ -343,6 +352,10 @@ Node Operations:
       --votes <votes>   Specify number of votes when adding a node
 
 Fencing Operations:
+      --lsfenceopts [fence type]
+                        List available fence devices.  If a fence type is
+                        specified, then list options for the specified
+                        fence type
       --lsfencedev      List all of the fence devices configured
       --lsfenceinst [<node>]
                         List all of the fence methods and instances on the
@@ -384,6 +397,10 @@ Failover Domain Operations:
                         Remove node from failover domain
 
 Service Operations:
+      --lsserviceopts [service type]
+                        List available services.  If a service type is
+                        specified, then list options for the specified
+                        service type
       --lsservices      List currently configured services and resources in
                         the cluster
       --addresource <resource type> [resource options] ...
@@ -1183,28 +1200,6 @@ def list_fenceinst(options):
                 print "    " + inst.getAttribute("name") + ": " + getNodeAttr(inst, "name")
     return
 
-
-# Disabling these functions until we get a better idea of how to
-# display fencing options
-#def ls_fencedev():
-#    rng = open(CLUSTERRNG)
-#    dom = minidom.parseString(rng.read())
-#    for elem in dom.getElementsByTagName("group"):
-#        if elem.getAttribute("rha:fence_agent"):
-#            print elem.getAttribute("rha:fence_agent")
-#
-#def ls_fenceinst(fencedev):
-#    rng = open(CLUSTERRNG)
-#    dom = minidom.parseString(rng.read())
-#    for elem in dom.getElementsByTagName("group"):
-#        if elem.getAttribute("rha:fence_agent") == fencedev:
-#            for attr in elem.getElementsByTagName("attribute"):
-#                attrname = attr.getAttribute("name")
-#                invisible_attrs = ["verbose", "debug", "version", "help",
-#                        "option", "action", "separator"]
-#                if attrname not in invisible_attrs:
-#                    print attr.getAttribute("name") + " - " + attr.getAttribute("rha:description")
-
 def add_service(name, options):
     dom = minidom.parseString(get_cluster_conf_xml())
 
@@ -1499,6 +1494,107 @@ def remove_vm(name):
         sys.exit(1)
 
     set_cluster_conf(dom.toxml())
+
+# Print out all the available service options from the cluster.rng file
+def list_serviceopts(options):
+    if len(options) == 0:
+        servicename = None
+    else:
+        servicename = options[0]
+
+    rng = open(CLUSTERRNG)
+    dom = minidom.parseString(rng.read())
+
+    for elem in dom.getElementsByTagName("define"):
+        if elem.getAttribute("name") == "CHILDREN":
+            for elem2 in elem.getElementsByTagName("ref"):
+                if servicename:
+                    if elem2.getAttribute("name").upper() == servicename.upper():
+                        (servname, servopts) = getServiceOptions(dom, elem2)
+                        print servname
+                        print servopts
+                else:
+                    (servname, servopts) = getServiceOptions(dom, elem2)
+                    print servname
+
+def list_fenceopts(options):
+    if len(options) == 0:
+        fencename = None
+    else:
+        fencename = options[0]
+
+    rng = open(CLUSTERRNG)
+    dom = minidom.parseString(rng.read())
+
+    for elem in dom.getElementsByTagName("define"):
+        if elem.getAttribute("name") == "FENCEDEVICEOPTIONS":
+            for elem2 in elem.getElementsByTagName("group"):
+                if fencename:
+                    if elem2.getAttribute("rha:name") == fencename:
+                        (fencelongname,fenceopts) = getFenceOptions(dom, elem2)
+                        print fencelongname
+                        if fenceopts == "":
+                            print "No description"
+                        else:
+                            print fenceopts
+                else:
+                    (fencelongname,fenceopts) = getFenceOptions(dom, elem2)
+                    if fencelongname: print fencelongname
+
+                    
+def getServiceOptions(dom, elem):
+    name = elem.getAttribute("name")
+    for elem in dom.getElementsByTagName("define"):
+        if elem.getAttribute("name") == name:
+            elem2 = elem.getElementsByTagName("element")[0]
+            description =  elem2.getAttribute("rha:description")
+            if not description:
+                description = "No description available"
+            longname = elem2.getAttribute("name") + " - " + description
+            options = getOptions(elem2)
+            return (longname, options)
+    return (False, False)
+
+def getFenceOptions(dom, elem):
+    if not elem.getAttribute("rha:name"):
+        return (False, False)
+    description =  elem.getAttribute("rha:description")
+    if not description:
+        description = "No description available"
+    longname = elem.getAttribute("rha:name") + " - " + description
+    options = getOptions(elem)
+    return (longname, options)
+        
+
+def getOptions(elem):
+    optionalOptions = []
+    requiredOptions = []
+    retval = ""
+    for elem2 in elem.getElementsByTagName("attribute"):
+        if elem2.parentNode.nodeName != "optional":
+            if elem2.getAttribute("name") != "ref":
+                requiredOptions.append(elem2)
+        else:
+            optionalOptions.append(elem2)
+    retval += "  Required Options:\n"
+    for elem2 in requiredOptions:
+        description = elem2.getAttribute("rha:description")
+        # Remove excess whitespace some attributes have
+        description = re.sub("\s\s+", " ", description)
+        name =  elem2.getAttribute("name")
+        if not description:
+            description = "No description available"
+        retval += "    " + name + ": " + description + "\n"
+    retval += "  Optional Options:\n"
+    for elem2 in optionalOptions:
+        description = elem2.getAttribute("rha:description")
+        # Remove excess whitespace some attributes have
+        description = re.sub("\s\s+", " ", description)
+        name =  elem2.getAttribute("name")
+        if not description:
+            description = "No description available"
+        retval += "    " + name + ": " + description + "\n"
+    return retval
 
 def list_quorum():
     xml = get_cluster_conf_xml()
