@@ -743,7 +743,12 @@ def get_cluster_conf_xml():
     else:
         xml = send_ricci_command("cluster", "get_cluster.conf")
 
-    dom = minidom.parseString(xml)
+    try:
+        dom = minidom.parseString(xml)
+    except minidom.xml.parsers.expat.ExpatError:
+        print "Cluster configuration file specified is not in a valid xml format."
+        sys.exit(1)
+
     if dom.getElementsByTagName('cluster').length > 0:
         xml =  dom.getElementsByTagName('cluster')[0].toxml()
         if verifyconf and verify_cluster_conf(xml) != 0:
