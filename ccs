@@ -1507,12 +1507,19 @@ def list_serviceopts(options):
     else:
         servicename = options[0]
 
+    # We don't print out info about the 'action' service
+    if servicename == "action":
+        return
+
     rng = open(CLUSTERRNG)
     dom = minidom.parseString(rng.read())
 
     for elem in dom.getElementsByTagName("define"):
         if elem.getAttribute("name") == "CHILDREN":
             for elem2 in elem.getElementsByTagName("ref"):
+                # We don't print out info about the 'action' service
+                if elem2.getAttribute("name") == "RESOURCEACTION":
+                    continue
                 if servicename:
                     if elem2.getAttribute("name").upper() == servicename.upper():
                         (servname, servopts) = getServiceOptions(dom, elem2)
