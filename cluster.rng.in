@@ -7,6 +7,7 @@ xmlns:rha="http://redhat.com/~pkennedy/annotation_namespace/cluster_conf_annot_n
 cluster
 - cman
 - totem
+- uidgid
 - quorumd
 - fence_daemon
 - fence_xvmd
@@ -169,6 +170,27 @@ To validate your cluster.conf against this schema, run:
  </optional>
 <!-- end cman block -->
 
+<!-- uidgid block -->
+ <optional>
+  <zeroOrMore>
+   <element name="uidgid" rha:description="Access control to corosync IPC">
+    <optional>
+     <attribute name="uid" rha:description="This is an unprivileged username,
+         as globally available to the system via /etc/passwd, including nis/ldap,
+         allowed to connect to corosync IPC. This value cannot be updated at runtime,
+         a full cman restart is required." rha:default="" rha:samble="userfoo"/>
+    </optional>
+    <optional>
+     <attribute name="gid" rha:description="This is an unprivileged group name,
+         as globally available to the system via /etc/group, including nis/ldap,
+         allowed to connect to corosync IPC. This value cannot be updated at runtime,
+         a full cman restart is required." rha:default="" rha:samble="groupfoo"/>
+    </optional>
+   </element>
+  </zeroOrMore>
+ </optional>
+<!-- end uidgid block -->
+
 <!-- totem block -->
  <optional>
   <element name="totem" rha:description="OpenAIS msg transport
@@ -235,7 +257,7 @@ To validate your cluster.conf against this schema, run:
       rha:sample="5"/>
    </optional>
    <!-- FIXME: The following description was adapted from the man page.
-   It may be tool long for the schema docuement. Consider cutting text
+   It may be tool long for the schema document. Consider cutting text
    after the second sentence and referring the reader to the openais.conf
    man page. -->
    <optional>
@@ -251,6 +273,13 @@ To validate your cluster.conf against this schema, run:
         specified, none is automatically chosen. If multiple interface
         directives are specified, only active or passive may be
         chosen." rha:sample="active"/>
+   </optional>
+   <optional>
+    <attribute name="rrp_problem_count_threshold"
+	rha:description="This specifies the number of times a problem is detected
+        with a link before setting the link faulty.  Once a link is set faulty, no
+        more data is transmitted upon it. Corosync default is 10, cman default is 3"
+        rha:default="3" rha:sample="5"/>
    </optional>
    <optional>
     <attribute name="secauth" rha:description="This attribute specifies
@@ -3599,6 +3628,9 @@ To validate your cluster.conf against this schema, run:
         </optional>
         <optional>
           <attribute name="delay" rha:description="Wait X seconds before fencing is started" />
+        </optional>
+        <optional>
+          <attribute name="privlvl" rha:description="Privilege level on IPMI device" />
         </optional>
         <optional>
           <attribute name="verbose" rha:description="Verbose mode" />
