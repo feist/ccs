@@ -334,14 +334,14 @@ Cluster Operations:
       --getversion      Get the current cluster.conf version
       --setversion <n>  Set the cluster.conf version
       --incversion      Increment the cluster.conf version by 1
-      --startall        Start cluster services on all nodes (and chkconfig
-                                                            services on)
-      --stopall         Stop cluster services on all nodes (and chkconfig
-                                                            services off)
-      --start           Start cluster services on host specified with -h
-                                            (and chkconfig services on)
-      --stop            Stop cluster services on host specified with -h
-                                            (and chkconfig services off)
+      --startall        Start *AND* enable cluster services on on reboot
+                        for all nodes
+      --stopall         Stop *AND* disable cluster services on reboot
+                        for all nodes
+      --start           Start *AND* enable cluster services on reboot for
+                        host specified with -h
+      --stop            Stop *AND* disable cluster services on reboot for
+                        host specified with -h
 
 Node Operations:
       --lsnodes         List all nodes in the cluster
