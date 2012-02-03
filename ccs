@@ -1999,6 +1999,8 @@ def check_cluster_conf():
     xml = get_cluster_conf_xml()
     dom = minidom.parseString(xml)
     
+    if usefile == True:
+      xml = xml.replace("\t","")
     usefile = False
     bad_nodes = []
     orig_hostname = hostname
