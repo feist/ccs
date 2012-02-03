@@ -1972,9 +1972,13 @@ def set_cluster_conf(xml, increment = True):
         xml = dom.toprettyxml("  ","\n")
         xml = xml.replace('<?xml version="1.0" ?>','')
         xml = re.sub(r"(?m)^\s*\n","", xml)
-        f = open(filename, 'w')
-        f.write(xml)
-        f.close()
+	try:
+	    f = open(filename, 'w')
+	    f.write(xml)
+	    f.close()
+	except IOError as (errno, strerror):
+	    print "Error: Unable to write file: '%s', %s" % (filename, strerror)
+	    exit(1)
     else:
         if activate:
             log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("propagate", "boolean", "true"),("cluster.conf","xml","",xml)))
