@@ -2065,7 +2065,12 @@ def send_ricci_command(module, command, host = None, *vars):
         if (not verify_authentication(dom)):
             print "Error: Not yet authenticated with %s (try -p option)" % host
             sys.exit(1)
-    xml = dom.getElementsByTagName('function_response')[0].toxml()
+    function_response = dom.getElementsByTagName('function_response')
+    if (len(function_response) != 0):
+        xml = function_response[0].toxml()
+    else:
+      	print "Error: Unable to retrieve information from ricci (is modcluster installed?)"
+	sys.exit(1)
     return xml 
 
 def send_to_ricci(msg, host=hostname):
