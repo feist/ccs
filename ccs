@@ -629,10 +629,17 @@ def list_nodes():
 def list_services():
     xml = get_cluster_conf_xml()
     dom = minidom.parseString(xml)
+    vm_already_printed = False
     for node in dom.getElementsByTagName('service'):
         print_services_map(node,0)
     for node in dom.getElementsByTagName('resources'):
         print_services_map(node,0)
+    for node in dom.getElementsByTagName('vm'):
+        if node.parentNode.tagName != 'resources':
+            if vm_already_printed == False:
+                print "virtual machines:"
+                vm_already_printed = True
+            print_services_map(node,2)
 
 def print_services_map(node,level):
     num_spaces = level * 2
@@ -651,11 +658,18 @@ def print_services_map(node,level):
 
 def getNodeAttr(node, ignore = []):
     nodeattr = ""
+    nodeattrlist = []
     if node.attributes != None:
         length = node.attributes.length
         for i in range(length):
             if node.attributes.item(i).name not in ignore:
-                nodeattr = nodeattr + node.attributes.item(i).name + "=" + node.attributes.item(i).value + ", "
+                if node.attributes.item(i).name == "name":
+                    nodeattrlist.insert(0,node.attributes.item(i))
+                else:
+                    nodeattrlist.append(node.attributes.item(i))
+        for item in nodeattrlist:
+            nodeattr = nodeattr + item.name + "=" + item.value + ", "
+
     nodeattr = re.sub(r", $","", nodeattr)
     return nodeattr
 
