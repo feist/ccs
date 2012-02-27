@@ -12,6 +12,7 @@ import time, random
 from Queue import Queue
 import getpass
 import subprocess
+import tempfile
 
 RICCI_PORT = 11111
 CLUSTERRNG = "/usr/share/ccs/cluster.rng"
@@ -24,6 +25,7 @@ hostname = False
 filename = False
 activate = False
 verifyconf = True
+schema = None
 
 class StopNodeThread (threading.Thread):
     def __init__ (self, host):
@@ -54,6 +56,7 @@ class StartNodeThread (threading.Thread):
 
 def main(argv):
     getconf = sendconf = False
+    getclusterschema = False
     status = start = stop = startall = stopall = False
     listnodes = listservices = listdomains = False
     addnode = removenode = getversion = False
@@ -80,7 +83,7 @@ def main(argv):
     lsfenceopts = lsserviceopts = False
 
     global password, debug, sync, hostname, usefile, filename, activate
-    global verifyconf
+    global verifyconf, schema
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
         opts, args = getopt.getopt(argv, "dsih:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
@@ -92,7 +95,7 @@ def main(argv):
       "setlogging", "addlogging","rmlogging","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
-      "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "ignore", "debug"])
+      "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -232,6 +235,7 @@ def main(argv):
         elif opt in ("-d","--debug"): debug = True
         elif opt in ("--exp"): exp = True; tag = arg; options = args
         elif opt in ("--exprm"): exprm = True; location = arg
+        elif opt in ("--getschema"): getclusterschema = True;
 
     if not hostname and not filename:
         print "Must specify a hostname or filename."
@@ -296,6 +300,7 @@ def main(argv):
     if (exp): expert_mode(tag, options)
     if (exprm): expert_mode_remove(location)
     if (sync): sync_cluster_conf()
+    if (getclusterschema): get_cluster_schema()
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -315,6 +320,8 @@ Cluster configuration system.
                         host's cluster.conf file have the identical
                         cluster.conf file
                         same cluster.conf
+      --getschema       Print current cluster schema file (if using -h use
+      			schema from network, if using -f use local schema)
       --sync            Sync config file to all nodes
       --activate        Activate config on node (use this option with --sync
                         to activate config on all nodes)
@@ -744,6 +751,42 @@ def increment_version():
     new_version = int(get_version()) + 1
     set_version(str(new_version))
     print new_version
+
+# If display is true, we print out the output, otherwise we just return it
+def get_cluster_schema(display=True):
+    if usefile:
+        out = get_cluster_schema_file()
+        if out == None:
+            print "Unable to open cluster schema: %s" % CLUSTERRNG
+            sys.exit(1)
+    else:
+        xml = send_ricci_command("cluster","get_cluster_schema")
+        dom = minidom.parseString(xml)
+        te = dom.getElementsByTagName("grammar")
+        if len(te) > 0:
+            out = te[0].toxml()
+        else:
+            print "Unable to get valid schema file from ricci falling back to local schema"
+            out = get_cluster_schema_file()
+            if out == None:
+                print "Unable to open cluster schema: %s" % CLUSTERRNG
+                sys.exit(1)
+
+    if display:
+        print out
+    else:
+        return out
+
+# Returns the contents of the local cluster schema file, or 'None' if there
+# is some error reading it
+def get_cluster_schema_file():
+    try:
+        rng = open(CLUSTERRNG, 'r')
+        out = rng.read()
+        rng.close()
+    except IOError:
+        return None
+    return out
 
 def get_cluster_conf_xml():
     if usefile:
@@ -2005,11 +2048,22 @@ def verify_cluster_conf(xml):
         print "%s is missing, unable to validate (use -i to ignore this error)" % CLUSTERRNG
         sys.exit(1)
 
+    global schema
+
+    if (schema == None): 
+        schema = get_cluster_schema(False)
+
+    schema = schema
+    schemaFile = tempfile.NamedTemporaryFile(delete=False)
+    schemaFile.write(schema)
+    schemaFile.close()
+
     lint = subprocess.Popen(["/usr/bin/xmllint","--noout","--relaxng",
-        CLUSTERRNG, "-"], stdin=subprocess.PIPE,
+        schemaFile.name, "-"], stdin=subprocess.PIPE,
         stderr=subprocess.STDOUT, stdout = subprocess.PIPE)
-    lint.communicate(xml)
+    (stdout, stderr) = lint.communicate(xml)
     ret = lint.wait()
+    schemaFile.close()
     return ret
 
 def check_cluster_conf():
