@@ -34,6 +34,9 @@ If file is specified, verify that all the nodes in the
 file have the same cluster.conf as the file.  If a
 host is specified then verify that all nodes in the
 host's cluster.conf file have the identical
+.IP "--getschema"
+Print current cluster schema file (if using -h use
+schema from network, if using -f use local schema)
 .IP "--sync"
 Sync config file to all nodes
 .IP "--activate"
@@ -56,13 +59,13 @@ Set the cluster.conf version
 .IP "--incversion
 Increment the cluster.conf version by 1
 .IP "--startall
-Start cluster services on all nodes (and chkconfig services on)
+Start *AND* enable cluster services on on reboot on all nodes
 .IP "--stopall
-Stop cluster services on all nodes (and chkconfig services off)
+Stop *AND* disable cluster services on reboot for all nodes
 .IP "--start
-Start cluster services on host specified with -h (and chkconfig services on)
+Start *AND* enable cluster services on reboot for host specified with -h
 .IP "--stop
-Stop cluster services on host specified with -h (and chkconfig services off)
+Stop *AND* disable cluster services on reboot for host specified with -h
 .SS "NODE OPERATIONS"
 .IP "--lsnodes
 List all nodes in the cluster

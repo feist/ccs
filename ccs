@@ -12,6 +12,7 @@ import time, random
 from Queue import Queue
 import getpass
 import subprocess
+import tempfile
 
 RICCI_PORT = 11111
 CLUSTERRNG = "/usr/share/ccs/cluster.rng"
@@ -24,6 +25,7 @@ hostname = False
 filename = False
 activate = False
 verifyconf = True
+schema = None
 
 class StopNodeThread (threading.Thread):
     def __init__ (self, host):
@@ -54,6 +56,7 @@ class StartNodeThread (threading.Thread):
 
 def main(argv):
     getconf = sendconf = False
+    getclusterschema = False
     status = start = stop = startall = stopall = False
     listnodes = listservices = listdomains = False
     addnode = removenode = getversion = False
@@ -80,7 +83,7 @@ def main(argv):
     lsfenceopts = lsserviceopts = False
 
     global password, debug, sync, hostname, usefile, filename, activate
-    global verifyconf
+    global verifyconf, schema
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
         opts, args = getopt.getopt(argv, "dsih:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
@@ -92,7 +95,7 @@ def main(argv):
       "setlogging", "addlogging","rmlogging","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
-      "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "ignore", "debug"])
+      "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -232,6 +235,7 @@ def main(argv):
         elif opt in ("-d","--debug"): debug = True
         elif opt in ("--exp"): exp = True; tag = arg; options = args
         elif opt in ("--exprm"): exprm = True; location = arg
+        elif opt in ("--getschema"): getclusterschema = True;
 
     if not hostname and not filename:
         print "Must specify a hostname or filename."
@@ -296,6 +300,7 @@ def main(argv):
     if (exp): expert_mode(tag, options)
     if (exprm): expert_mode_remove(location)
     if (sync): sync_cluster_conf()
+    if (getclusterschema): get_cluster_schema()
 
 def usage():
     print """Usage: ccs [OPTION]...
@@ -315,6 +320,8 @@ Cluster configuration system.
                         host's cluster.conf file have the identical
                         cluster.conf file
                         same cluster.conf
+      --getschema       Print current cluster schema file (if using -h use
+      			schema from network, if using -f use local schema)
       --sync            Sync config file to all nodes
       --activate        Activate config on node (use this option with --sync
                         to activate config on all nodes)
@@ -334,14 +341,14 @@ Cluster Operations:
       --getversion      Get the current cluster.conf version
       --setversion <n>  Set the cluster.conf version
       --incversion      Increment the cluster.conf version by 1
-      --startall        Start cluster services on all nodes (and chkconfig
-                                                            services on)
-      --stopall         Stop cluster services on all nodes (and chkconfig
-                                                            services off)
-      --start           Start cluster services on host specified with -h
-                                            (and chkconfig services on)
-      --stop            Stop cluster services on host specified with -h
-                                            (and chkconfig services off)
+      --startall        Start *AND* enable cluster services on on reboot
+                        for all nodes
+      --stopall         Stop *AND* disable cluster services on reboot
+                        for all nodes
+      --start           Start *AND* enable cluster services on reboot for
+                        host specified with -h
+      --stop            Stop *AND* disable cluster services on reboot for
+                        host specified with -h
 
 Node Operations:
       --lsnodes         List all nodes in the cluster
@@ -629,10 +636,17 @@ def list_nodes():
 def list_services():
     xml = get_cluster_conf_xml()
     dom = minidom.parseString(xml)
+    vm_already_printed = False
     for node in dom.getElementsByTagName('service'):
         print_services_map(node,0)
     for node in dom.getElementsByTagName('resources'):
         print_services_map(node,0)
+    for node in dom.getElementsByTagName('vm'):
+        if node.parentNode.tagName != 'resources':
+            if vm_already_printed == False:
+                print "virtual machines:"
+                vm_already_printed = True
+            print_services_map(node,2)
 
 def print_services_map(node,level):
     num_spaces = level * 2
@@ -651,11 +665,18 @@ def print_services_map(node,level):
 
 def getNodeAttr(node, ignore = []):
     nodeattr = ""
+    nodeattrlist = []
     if node.attributes != None:
         length = node.attributes.length
         for i in range(length):
             if node.attributes.item(i).name not in ignore:
-                nodeattr = nodeattr + node.attributes.item(i).name + "=" + node.attributes.item(i).value + ", "
+                if node.attributes.item(i).name == "name":
+                    nodeattrlist.insert(0,node.attributes.item(i))
+                else:
+                    nodeattrlist.append(node.attributes.item(i))
+        for item in nodeattrlist:
+            nodeattr = nodeattr + item.name + "=" + item.value + ", "
+
     nodeattr = re.sub(r", $","", nodeattr)
     return nodeattr
 
@@ -731,6 +752,42 @@ def increment_version():
     set_version(str(new_version))
     print new_version
 
+# If display is true, we print out the output, otherwise we just return it
+def get_cluster_schema(display=True):
+    if usefile:
+        out = get_cluster_schema_file()
+        if out == None:
+            print "Unable to open cluster schema: %s" % CLUSTERRNG
+            sys.exit(1)
+    else:
+        xml = send_ricci_command("cluster","get_cluster_schema")
+        dom = minidom.parseString(xml)
+        te = dom.getElementsByTagName("grammar")
+        if len(te) > 0:
+            out = te[0].toxml()
+        else:
+            print "Unable to get valid schema file from ricci falling back to local schema"
+            out = get_cluster_schema_file()
+            if out == None:
+                print "Unable to open cluster schema: %s" % CLUSTERRNG
+                sys.exit(1)
+
+    if display:
+        print out
+    else:
+        return out
+
+# Returns the contents of the local cluster schema file, or 'None' if there
+# is some error reading it
+def get_cluster_schema_file():
+    try:
+        rng = open(CLUSTERRNG, 'r')
+        out = rng.read()
+        rng.close()
+    except IOError:
+        return None
+    return out
+
 def get_cluster_conf_xml():
     if usefile:
         try:
@@ -743,7 +800,12 @@ def get_cluster_conf_xml():
     else:
         xml = send_ricci_command("cluster", "get_cluster.conf")
 
-    dom = minidom.parseString(xml)
+    try:
+        dom = minidom.parseString(xml)
+    except minidom.xml.parsers.expat.ExpatError:
+        print "Cluster configuration file specified is not in a valid xml format."
+        sys.exit(1)
+
     if dom.getElementsByTagName('cluster').length > 0:
         xml =  dom.getElementsByTagName('cluster')[0].toxml()
         if verifyconf and verify_cluster_conf(xml) != 0:
@@ -1967,9 +2029,13 @@ def set_cluster_conf(xml, increment = True):
         xml = dom.toprettyxml("  ","\n")
         xml = xml.replace('<?xml version="1.0" ?>','')
         xml = re.sub(r"(?m)^\s*\n","", xml)
-        f = open(filename, 'w')
-        f.write(xml)
-        f.close()
+	try:
+	    f = open(filename, 'w')
+	    f.write(xml)
+	    f.close()
+	except IOError as (errno, strerror):
+	    print "Error: Unable to write file: '%s', %s" % (filename, strerror)
+	    exit(1)
     else:
         if activate:
             log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("propagate", "boolean", "true"),("cluster.conf","xml","",xml)))
@@ -1982,11 +2048,22 @@ def verify_cluster_conf(xml):
         print "%s is missing, unable to validate (use -i to ignore this error)" % CLUSTERRNG
         sys.exit(1)
 
+    global schema
+
+    if (schema == None): 
+        schema = get_cluster_schema(False)
+
+    schema = schema
+    schemaFile = tempfile.NamedTemporaryFile(delete=False)
+    schemaFile.write(schema)
+    schemaFile.close()
+
     lint = subprocess.Popen(["/usr/bin/xmllint","--noout","--relaxng",
-        CLUSTERRNG, "-"], stdin=subprocess.PIPE,
+        schemaFile.name, "-"], stdin=subprocess.PIPE,
         stderr=subprocess.STDOUT, stdout = subprocess.PIPE)
-    lint.communicate(xml)
+    (stdout, stderr) = lint.communicate(xml)
     ret = lint.wait()
+    schemaFile.close()
     return ret
 
 def check_cluster_conf():
@@ -1994,6 +2071,8 @@ def check_cluster_conf():
     xml = get_cluster_conf_xml()
     dom = minidom.parseString(xml)
     
+    if usefile == True:
+      xml = xml.replace("\t","")
     usefile = False
     bad_nodes = []
     orig_hostname = hostname
@@ -2058,14 +2137,25 @@ def send_ricci_command(module, command, host = None, *vars):
         if (not verify_authentication(dom)):
             print "Error: Not yet authenticated with %s (try -p option)" % host
             sys.exit(1)
-    xml = dom.getElementsByTagName('function_response')[0].toxml()
+    function_response = dom.getElementsByTagName('function_response')
+    if (len(function_response) != 0):
+        xml = function_response[0].toxml()
+    else:
+      	print "Error: Unable to retrieve information from ricci (is modcluster installed?)"
+	sys.exit(1)
     return xml 
 
 def send_to_ricci(msg, host=hostname):
     cert = os.path.expanduser("~/.ccs/cacert.pem")
     key = os.path.expanduser("~/.ccs/privkey.pem")
     config = os.path.expanduser("~/.ccs/cacert.config")
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        (family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(host, RICCI_PORT)[0]
+    except socket.gaierror:
+        print "Unable to resolve %s, does that host exist?" % host
+        sys.exit(1)
+    
+    s = socket.socket(family, socktype, proto)
 
     # Make sure we have a client certificate and private key
     # If not we need to autogenerate them (including creating an
