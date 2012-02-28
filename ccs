@@ -341,7 +341,7 @@ Cluster Operations:
       --getversion      Get the current cluster.conf version
       --setversion <n>  Set the cluster.conf version
       --incversion      Increment the cluster.conf version by 1
-      --startall        Start *AND* enable cluster services on on reboot
+      --startall        Start *AND* enable cluster services on reboot
                         for all nodes
       --stopall         Stop *AND* disable cluster services on reboot
                         for all nodes
