@@ -16,6 +16,7 @@ import tempfile
 
 RICCI_PORT = 11111
 CLUSTERRNG = "/usr/share/ccs/cluster.rng"
+EMPTYCLUSTERCONF = "/usr/share/ccs/empty_cluster.conf"
 
 password = None
 debug = False
@@ -844,6 +845,19 @@ def empty_cluster_conf(name="cluster"):
 
 def create_cluster(clustername):
     xml = empty_cluster_conf(clustername)
+
+    f = open(EMPTYCLUSTERCONF, 'r')
+
+    # Verify that a config doesn't exist, and if it does warn the user
+    if verifyconf:
+        if usefile:
+            if os.path.exists(filename):
+                print "%s already exists, use '-i' to override." % filename
+                sys.exit(1)
+        elif get_cluster_conf_xml() != f.read():
+                print "cluster.conf already exists, use '-i' to override."
+                sys.exit(1)
+
     # No need to increment on cluster.conf creation
     set_cluster_conf(xml, False)
 
