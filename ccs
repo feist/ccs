@@ -66,6 +66,7 @@ def main(argv):
     addfencedev = removefencedev = False
     addfenceinst = removefenceinst = False
     addunfenceinst = removeunfenceinst = False
+    addalt = rmalt = False
     lsfencedev = lsfenceinst = False
     addfailoverdomain = removefailoverdomain = False
     lsfailoverdomain = addfailoverdomainnode = removefailoverdomainnode = False
@@ -76,7 +77,7 @@ def main(argv):
     setlogging = addlogging = removelogging = False
     addvm = removevm = False
     listmisc = False
-    setdlm = setmulticast = False
+    setdlm = setmulticast = setaltmulticast = False
     passwordset = False
     nodeid = votes = False
     checkconf = False
@@ -96,7 +97,8 @@ def main(argv):
       "setlogging", "addlogging","rmlogging","setmulticast","sync","addfailoverdomainnode=", "file=", "nodeid=",
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
-      "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug"])
+      "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug",
+      "setaltmulticast","addalt=", "rmalt="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -163,6 +165,8 @@ def main(argv):
             removeunfenceinst = True
             name = arg
             options = args
+        elif opt in ("--addalt"): addalt = True; name = arg; options = args
+        elif opt in ("--rmalt"): rmalt = True; name = arg; options = args
         elif opt in ("--lsfencedev"): lsfencedev = True;
         elif opt in ("--lsfenceinst"): lsfenceinst = True; options = args
         elif opt in ("--lsfailoverdomain"): lsfailoverdomain = True
@@ -231,6 +235,7 @@ def main(argv):
         elif opt in ("--addlogging"): addlogging = True; options = args
         elif opt in ("--rmlogging"): removelogging = True; options = args
         elif opt in ("--setmulticast"): setmulticast = True; options = args
+        elif opt in ("--setaltmulticast"): setaltmulticast = True; options = args
         elif opt in ("--nodeid"): nodeid = arg
         elif opt in ("--votes"): votes = arg
         elif opt in ("-d","--debug"): debug = True
@@ -267,6 +272,8 @@ def main(argv):
     if (removefenceinst): remove_fenceinst(name, options)
     if (addunfenceinst): add_unfenceinst(name, options)
     if (removeunfenceinst): remove_unfenceinst(name, options)
+    if (addalt): add_alt(False, name, options)
+    if (rmalt): add_alt(True, name, options)
     if (lsfencedev): list_fencedev()
     if (lsfenceinst): list_fenceinst(options)
     if (lsfailoverdomain): list_failoverdomain()
@@ -297,7 +304,8 @@ def main(argv):
     if (setlogging): set_logging(options)
     if (addlogging): add_logging_daemon(options)
     if (removelogging): remove_logging_daemon(options)
-    if (setmulticast): set_multicast(options)
+    if (setmulticast): set_multicast(False, options)
+    if (setaltmulticast): set_multicast(True, options)
     if (exp): expert_mode(tag, options)
     if (exprm): expert_mode_remove(location)
     if (sync): sync_cluster_conf()
@@ -358,6 +366,10 @@ Node Operations:
                         Remove a node from the cluster
       --nodeid <nodeid> Specify nodeid when adding a node
       --votes <votes>   Specify number of votes when adding a node
+      --addalt <node name> <alt name> [alt options]
+      			Add an altname to a node for RRP
+      --rmalt <node name>
+      			Remove an altname from a node for RRP
 
 Fencing Operations:
       --lsfenceopts [fence type]
@@ -468,9 +480,12 @@ Misc Options
                         Set resource manager options
       --setcman [cman options]
                         Set cman options
-      --setmulticast [multicast address]
-                        Set's the multicast address to use (or removes it
+      --setmulticast [multicast address] [multicast options]
+                        Sets the multicast address to use (or removes it
                         if no multicast address is given)
+      --setaltmulticast [alt multicast address] [alt multicast options]
+                        Sets the alt multicast address to use (or removes it
+                        if no alt multicast address is given)
       --setfencedaemon [fence daemon options]
                         Set fence daemon options
       --setlogging [logging options]
@@ -1097,6 +1112,35 @@ def remove_unfenceinst(name, options):
     if unfenceinst_found == False:
         print "Unfence instance '%s' for node '%s' does not exist in cluster.conf." % (name, nodename)
         sys.exit(1)
+
+    set_cluster_conf(dom.toxml())
+
+def add_alt(remove, node_name, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+    node_found = False
+
+    if (not remove) and len(options) < 1:
+        usage()
+        sys.exit(2)
+
+    for node in dom.getElementsByTagName('clusternode'):
+        if node.getAttribute("name") == node_name:
+            node_found = True
+            break
+
+    if node_found == False:
+        print "Node '%s' does not currently exist in cluster.conf." % (node_name)
+        sys.exit(1)
+
+    # Clear out old altnames
+    for altname_node in node.getElementsByTagName('altname'):
+        node.removeChild(altname_node)
+
+    if not remove:
+        new_altname = dom.createElement("altname")
+        new_altname = set_element_attributes(new_altname, options[1:])
+        new_altname.setAttribute("name", options[0])
+        node.appendChild(new_altname)
 
     set_cluster_conf(dom.toxml())
 
@@ -1953,7 +1997,7 @@ def remove_logging_daemon(options):
             
     set_cluster_conf(dom.toxml())
 
-def set_multicast(options):
+def set_multicast(alt,options):
     dom = minidom.parseString(get_cluster_conf_xml())
 
 
@@ -1967,20 +2011,21 @@ def set_multicast(options):
         print "Error: more than one cman section is present."
         sys.exit(1)
 
-    mc = cman.getElementsByTagName('multicast')
+    if alt:
+      tagName = "altmulticast"
+    else:
+      tagName = "multicast"
 
-    # If 0 or 1 options are passed it's valid and we remove old configs
-    # If more than 1 option is passed, it's a usage error
-    if len(options) > 1:
-        print "Too many options passed to --setmulticast"
-        sys.exit(1)
+    mc = cman.getElementsByTagName(tagName)
 
     for i in mc:
         cman.removeChild(i)
 
-    if len(options) == 1:
-        mc = dom.createElement("multicast")
-        mc.setAttribute("addr",options[0])
+    if len(options) >= 1:
+        addr = options.pop(0)
+        mc = dom.createElement(tagName)
+        mc.setAttribute("addr",addr)
+        set_element_attributes(mc, options)
         cman.appendChild(mc)
 
     set_cluster_conf(dom.toxml())

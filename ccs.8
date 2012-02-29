@@ -77,6 +77,10 @@ Remove a node from the cluster
 Specify nodeid when adding a node
 .IP "--votes <votes>
 Specify number of votes when adding a node
+.IP "--addalt <node name> <alt name> [alt options]
+Add an altname to a node for RRP
+.IP "--rmalt <node name>
+Remove an altname from a node for RRP
 .SS "FENCING OPERATIONS"
 .IP "--lsfenceopts [fence type]
 List available fence devices.  If a fence type is
@@ -184,9 +188,12 @@ Set dlm options
 Set resource manager options
 .IP "--setcman [cman options]
 Set cman options
-.IP "--setmulticast [multicast address]
-Set's the multicast address to use (or removes it
+.IP "--setmulticast [multicast address] [multicast options]
+Sets the multicast address to use (or removes it
 if no multicast address is given)
+.IP "--setaltmulticast [alt multicast address] [alt multicast options]
+Sets the alt multicast address to use (or removes it
+if no alt multicast address is given)
 .IP "--setfencedaemon [fence daemon options]
 Set fence daemon options
 .IP "--setlogging [logging options]
