@@ -32,6 +32,7 @@ class StopNodeThread (threading.Thread):
     def __init__ (self, host):
         self.host = host
         threading.Thread.__init__(self)
+        self.output = ""
 
     def getoutput(self):
         return self.output
