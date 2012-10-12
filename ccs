@@ -555,7 +555,7 @@ def start_node(node, inthread=False):
                 sys.exit(1)
 
         if var.getAttribute("value") == "false":
-            myerr = "Unable to start %s, possibly do to lack of quorum, try --startall\n" % node
+            myerr = "Unable to start %s, possibly due to lack of quorum, try --startall\n" % node
             myerr += "Error: " +error_description
             if inthread:
                 return myerr
