@@ -2250,7 +2250,7 @@ emailAddress           = root@localhost
         if (debug):
             redirect = ""
         else:
-            redirect = " > /dev/null 2&>1"
+            redirect = " > /dev/null 2>&1"
 
         os.system ("/usr/bin/openssl genrsa -out %s 2048 %s" % (key,redirect))
         os.system ("/usr/bin/openssl req -new -x509 -key %s -out %s -days 1825 -config ~/.ccs/cacert.config" % (key,cert))
