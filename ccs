@@ -1489,8 +1489,11 @@ def add_resource(type, options):
 
     # Verify resources section exists in cluster.conf
     resources = dom.getElementsByTagName('resources')
+    rms = dom.getElementsByTagName('rm')
+    if len(rms) == 0:
+        resource = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("rm"))
     if len(resources) == 0:
-        resources = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("resources"))
+        resources = dom.getElementsByTagName('rm')[0].appendChild(dom.createElement("resources"))
     elif len(resources) > 1:
         print "Error: Too many resources elements in cluster.conf"
         sys.exit(1)
