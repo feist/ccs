@@ -20,7 +20,7 @@ cluster
 - rm
 - clvmd
 
-Element defnitions:
+Element definitions:
 - Resource
 - Fence
 
@@ -1459,6 +1459,9 @@ To validate your cluster.conf against this schema, run:
         <optional>
           <attribute name="nfslock" rha:description="Enable NFS lock workarounds"/>
         </optional>
+        <optional>
+          <attribute name="nfsrestart" rha:description="Enable NFS daemon and lockd workaround"/>
+        </optional>
       </group>
       </choice>
       <optional>
@@ -1511,6 +1514,9 @@ To validate your cluster.conf against this schema, run:
         </optional>
         <optional>
           <attribute name="nfslock" rha:description="Enable NFS lock workarounds"/>
+        </optional>
+        <optional>
+          <attribute name="nfsrestart" rha:description="Enable NFS daemon and lockd workaround"/>
         </optional>
         <optional>
           <attribute name="fsid" rha:description="NFS File system ID"/>
@@ -1571,6 +1577,9 @@ To validate your cluster.conf against this schema, run:
         </optional>
         <optional>
           <attribute name="disable_rdisc" rha:description="Disable updating of routing using RDISC protocol"/>
+        </optional>
+        <optional>
+          <attribute name="prefer_interface" rha:description="Network interface"/>
         </optional>
       </group>
       </choice>
@@ -2959,6 +2968,7 @@ To validate your cluster.conf against this schema, run:
         </optional>
       </group>
 
+      <!-- No metadata for /usr/sbin/fence_check -->
 
       <!-- fence_cisco_mds -->
       <group rha:name="fence_cisco_mds" rha:description="Fence agent for Cisco MDS">
@@ -3811,6 +3821,7 @@ To validate your cluster.conf against this schema, run:
       </group>
 
       <!-- No metadata for /usr/sbin/fence_kdump_send -->
+      <!-- No metadata for /usr/sbin/fence_pcmk -->
 
       <!-- fence_rhevm -->
       <group rha:name="fence_rhevm" rha:description="Fence agent for RHEV-M REST API">
