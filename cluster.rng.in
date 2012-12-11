@@ -4574,6 +4574,24 @@ To validate your cluster.conf against this schema, run:
       </group>
 
 
+      <!-- fence_sanlock -->
+      <group rha:name="fence_sanlock" rha:description="Fence agent for watchdog and shared storage">
+        <optional>
+          <attribute name="option"/> <!-- deprecated; for compatibility.  use "action" -->
+        </optional>
+        <optional>
+          <attribute name="action" rha:description="Fencing Action" />
+        </optional>
+        <optional>
+          <attribute name="path" rha:description="Path to sanlock shared storage" />
+        </optional>
+        <optional>
+          <attribute name="host_id" rha:description="Host id for sanlock (1-128)" />
+        </optional>
+      </group>
+
+      <!-- No metadata for /usr/sbin/fence_sanlockd -->
+
       <!-- fence_scsi -->
       <group rha:name="fence_scsi" rha:description="fence agent for SCSI-3 persistent reservations">
         <optional>
@@ -4702,6 +4720,9 @@ To validate your cluster.conf against this schema, run:
         </optional>
         <optional>
           <attribute name="timeout" rha:description="Fencing timeout (in seconds; default=30)" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Fencing delay (in seconds; default=0)" />
         </optional>
         <optional>
           <attribute name="domain" rha:description="Virtual Machine (domain name) to fence (deprecated; use port)" />
@@ -4968,6 +4989,9 @@ To validate your cluster.conf against this schema, run:
         </optional>
         <optional>
           <attribute name="timeout" rha:description="Fencing timeout (in seconds; default=30)" />
+        </optional>
+        <optional>
+          <attribute name="delay" rha:description="Fencing delay (in seconds; default=0)" />
         </optional>
         <optional>
           <attribute name="domain" rha:description="Virtual Machine (domain name) to fence (deprecated; use port)" />
