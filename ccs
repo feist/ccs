@@ -99,7 +99,7 @@ def main(argv):
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
       "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug",
-      "setaltmulticast","addalt=", "rmalt="])
+      "setaltmulticast","addalt=", "rmalt=","lsresourceopts"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -216,7 +216,7 @@ def main(argv):
         elif opt in ("--rmvm"):
             removevm = True
             name = arg
-        elif opt in ("--lsserviceopts"):
+        elif opt in ("--lsserviceopts") or opt in ("--lsresourceopts"):
             lsserviceopts = True
             options = args
         elif opt in ("--lsfenceopts"):
@@ -422,6 +422,8 @@ Service Operations:
                         List available services.  If a service type is
                         specified, then list options for the specified
                         service type
+      --lsresourceopts [service type]
+      			An alias to --lsserviceopts
       --lsservices      List currently configured services and resources in
                         the cluster
       --addresource <resource type> [resource options] ...
