@@ -17,7 +17,7 @@ install:
 	install cluster.rng.in ${DESTDIR}/usr/share/ccs/cluster.rng
 	install empty_cluster.conf ${DESTDIR}/usr/share/ccs/cluster.rng
 	install -d ${DESTDIR}/${MANDIR}/man8
-	install ccs.8 ${DESTDIR}/${MANDIR}/man8
+	install ccs.8 -m644 ${DESTDIR}/${MANDIR}/man8
 
 test:
 	cd unit_tests; ./unittest.pl
