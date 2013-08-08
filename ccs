@@ -1832,7 +1832,7 @@ def list_misc():
     list_tag(dom, "cman", "CMAN")
     list_tag(dom, "multicast", "Multicast")
     list_tag(dom, "altmulticast", "Alt Multicast")
-    list_tag(dom, "fencedaemon", "Fence Daemon")
+    list_tag(dom, "fence_daemon", "Fence Daemon")
     list_tag(dom, "logging", "Logging")
     list_tag(dom, "logging_daemon", "  Logging Daemons")
 
