@@ -26,6 +26,7 @@ hostname = False
 filename = False
 activate = False
 verifyconf = True
+nounfence = False
 schema = None
 
 class StopNodeThread (threading.Thread):
@@ -86,10 +87,10 @@ def main(argv):
     lsfenceopts = lsserviceopts = False
 
     global password, debug, sync, hostname, usefile, filename, activate
-    global verifyconf, schema
+    global verifyconf, schema, nounfence
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
-        opts, args = getopt.getopt(argv, "dsih:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
+        opts, args = getopt.gnu_getopt(argv, "dsih:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
       "lsservices", "listdomains", "addnode=", "rmnode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "rmmethod=", "addfencedev=", "rmfencedev=",
       "addfenceinst=", "rmfenceinst=", "lsfencedev", "lsfenceinst", "sync", "addfailoverdomain=",
@@ -99,7 +100,7 @@ def main(argv):
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
       "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug",
-      "setaltmulticast","addalt=", "rmalt=","lsresourceopts"])
+      "setaltmulticast","addalt=", "rmalt=","lsresourceopts","nounfence"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -117,6 +118,7 @@ def main(argv):
             verifyconf = False
         elif opt in ("--password", "-p"): passwordset = True ; password = arg
         elif opt in ("--getconf"): getconf = True
+        elif opt in ("--nounfence"): nounfence = True;
         elif opt in ("--checkconf"): checkconf = True
         elif opt in ("--setconf"): sendconf = True
         elif opt in ("--status"): status = True
@@ -1001,11 +1003,14 @@ def add_fenceinst(name, options):
     nodename = options[0]
     methodname = options[1]
     dom = minidom.parseString(get_cluster_conf_xml())
+    unfence=False
 
     # Verify fence device exists
     for fencedev in dom.getElementsByTagName('fencedevice'):
         if fencedev.getAttribute("name") == name:
             fencedev_found = True
+	    if need_unfence(fencedev.getAttribute("agent")):
+	      unfence=True
             break
     
     # Verify method exists for specified node
@@ -1030,7 +1035,16 @@ def add_fenceinst(name, options):
 
     newfenceinst.setAttribute("name", name)
     method.appendChild(newfenceinst)
+
     set_cluster_conf(dom.toxml())
+
+    if need_unfence and not nounfence:
+      for o in options[:]:
+	if o.startswith("action="):
+	  options.remove(o)
+      options.append("action=on")
+      print "Note: Automatically adding unfence action... (use --nounfence to prevent this)"
+      add_unfenceinst(name, options[:1] + options[2:])
     
 def remove_fenceinst(name, options):
     fenceinst_found = False
@@ -2291,6 +2305,13 @@ emailAddress           = root@localhost
     log_msg (res2)
     log_msg ("***Receive End")
     return res1, res2
+
+# This function returns true if the agent requires an unfence section
+def need_unfence(agent):
+    if agent == "fence_scsi":
+	return True
+    else:
+      	return False
 
 def log_msg(message):
     if debug == True:
