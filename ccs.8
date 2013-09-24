@@ -99,8 +99,12 @@ Remove a fence method from a specific node
 Add fence device. Fence devices and parameters can be found in online documentation in 'Fence Device Parameters'
 .IP "--rmfencedev <fence device name>
 Remove fence device
-.IP "--addfenceinst <fence device name> <node> <method> [options]
-Add fence instance. Fence instance parameters can be found in online documentation in 'Fence Device Parameters'
+.IP "--addfenceinst <fence device name> <node> <method> [options] [--nounfence]
+Add fence instance. Fence instance parameters can be found in online documentation in 'Fence Device Parameters'.
+Using --nounfence prevents ccs from automatically
+including an unfencing section for agents that require
+unfencing (ie. fence_scsi, fence_sanlock, etc.)
+
 .IP "--rmfenceinst <fence device name> <node> <method>
 Remove all instances of the fence device listed from
 the given method and node

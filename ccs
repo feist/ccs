@@ -393,10 +393,12 @@ Fencing Operations:
                         Parameters'
       --rmfencedev <fence device name>
                         Remove fence device
-      --addfenceinst <fence device name> <node> <method> [options]
+      --addfenceinst <fence device name> <node> <method> [options] [--nounfence]
                         Add fence instance. Fence instance parameters can be
                         found in online documentation in 'Fence Device
-                        Parameters'
+                        Parameters'. Using --nounfence prevents ccs from automatically
+                        including an unfencing section for agents that require
+                        unfencing (ie. fence_scsi, fence_sanlock, etc.)
       --rmfenceinst <fence device name> <node> <method>
                         Remove all instances of the fence device listed from
                         the given method and node
@@ -2308,7 +2310,7 @@ emailAddress           = root@localhost
 
 # This function returns true if the agent requires an unfence section
 def need_unfence(agent):
-    if agent == "fence_scsi":
+    if agent == "fence_scsi" or agent == "fence_sanlock":
 	return True
     else:
       	return False
