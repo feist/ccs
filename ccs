@@ -76,6 +76,7 @@ def main(argv):
     removeservice = removesubservice = removeresource = False
     listquorum = setquorumd = addheuristic = removeheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
+    setuidgid = rmuidgid = False
     setlogging = addlogging = removelogging = False
     addvm = removevm = False
     listmisc = False
@@ -100,7 +101,7 @@ def main(argv):
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
       "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug",
-      "setaltmulticast","addalt=", "rmalt=","lsresourceopts","nounfence"])
+      "setaltmulticast","addalt=", "rmalt=","lsresourceopts","nounfence","setuidgid","rmuidgid"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -230,6 +231,8 @@ def main(argv):
         elif opt in ("--rmheuristic"): removeheuristic = True; options = args
         elif opt in ("--lsmisc"): listmisc = True
         elif opt in ("--settotem"): settotem = True; options = args
+        elif opt in ("--setuidgid"): setuidgid = True; options = args
+        elif opt in ("--rmuidgid"): rmuidgid = True; options = args
         elif opt in ("--setrm"): setrm = True; options = args
         elif opt in ("--setcman"): setcman = True; options = args
         elif opt in ("--setdlm"): setdlm = True; options = args
@@ -300,6 +303,8 @@ def main(argv):
     if (removeheuristic): remove_heuristic(options)
     if (listmisc): list_misc()
     if (settotem): set_totem(options)
+    if (setuidgid): set_uidgid(options)
+    if (rmuidgid): rm_uidgid(options)
     if (setrm): set_rm(options)
     if (setcman): set_cman(options)
     if (setdlm): set_dlm(options)
@@ -481,6 +486,10 @@ Misc Options
       --lsmisc          List all of the misc options
       --settotem [totem options]
                         Set totem options
+      --setuidgid uid=<uid> gid=<gid>
+      			Set uidgid options
+      --rmuidgid uid=<uid> gid=<gid>
+      			Remove uidgid entry matching specified uid/gid
       --setdlm [dlm options]
                         Set dlm options
       --setrm [resource manager options]
@@ -1851,6 +1860,7 @@ def list_misc():
     list_tag(dom, "fence_daemon", "Fence Daemon")
     list_tag(dom, "logging", "Logging")
     list_tag(dom, "logging_daemon", "  Logging Daemons")
+    list_tag(dom, "uidgid", "UID/GID")
 
 def set_totem(options):
     dom = minidom.parseString(get_cluster_conf_xml())
@@ -1870,6 +1880,72 @@ def set_totem(options):
 
     totem = set_element_attributes(totem, options)
     set_cluster_conf(dom.toxml())
+
+def set_uidgid(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    current_uidgids = dom.getElementsByTagName("uidgid")
+    uidgid = dom.getElementsByTagName('cluster')[0].appendChild(dom.createElement("uidgid"))
+    attributes_set = False
+    for opt in options:
+	if opt.find('=') == -1:
+	    print "Error: --setuidgid options must be of the form uid=<uid> gid=<gid>"
+	    sys.exit(1)
+	(k,v) = opt.split('=',1)
+	if k != "uid" and k != "gid":
+	    print "Error: --setuidgid options must be of the form uid=<uid> gid=<gid>"
+	    sys.exit(1)
+	uidgid.setAttribute(k,v)
+	attributes_set = True
+    if not attributes_set:
+	print "Error: you must set either gid or uid"
+	sys.exit(1)
+
+# Check to make sure we're not duplicating an already existing item
+    for ug in current_uidgids:
+	if ug.getAttribute("uid") == uidgid.getAttribute("uid") and ug.getAttribute("gid") == uidgid.getAttribute("gid"):
+	    print "Error: uidgid entry already exists with uid=%s, gid=%s" % (ug.getAttribute("uid"),ug.getAttribute("gid"))
+	    sys.exit(1)
+
+    set_cluster_conf(dom.toxml())
+	
+def rm_uidgid(options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    uidgids = dom.getElementsByTagName('uidgid')
+    if len(uidgids) == 0:
+      print "Error: can't remove uidgid, no uidgid section exists in cluster.conf"
+      sys.exit(1)
+
+    uid = ""
+    gid = ""
+
+    for opt in options:
+	if opt.find('=') == -1:
+	    print "Error: --rmuidgid options must be of the form uid=<uid> gid=<gid>"
+	    sys.exit(1)
+	(k,v) = opt.split('=',1)
+	if k != "uid" and k != "gid":
+	    print "Error: --rmuidgid options must be of the form uid=<uid> gid=<gid>"
+	    sys.exit(1)
+	if k == "uid":
+	    uid = v
+	if k == "gid":
+	    gid = v
+
+    removed = False
+    for ug in uidgids:
+	if ug.getAttribute("uid") == uid and ug.getAttribute("gid") == gid:
+	    ug.parentNode.removeChild(ug)
+	    print "Removing uid=%s, gid=%s" % (uid,gid)
+	    removed = True
+	    break
+
+    if removed:
+	set_cluster_conf(dom.toxml())
+    else:
+	print "Error: unable to find uidgid with uid=%s, gid=%s" % (uid,gid)
+    	sys.exit(1)
 
 def set_rm(options):
     dom = minidom.parseString(get_cluster_conf_xml())

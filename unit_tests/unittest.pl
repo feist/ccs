@@ -113,6 +113,22 @@ sub misc_test {
   test ("$CCS -f $t --rmlogging name=4",0);
   test ("$CCS -f $t --rmlogging name=4",1);
 
+  test ("$CCS -f $t --setuidgid",1);
+  test ("$CCS -f $t --setuidgid uid=x gid=y",0);
+  test ("$CCS -f $t --setuidgid uid=a gid=b",0);
+  test ("$CCS -f $t --setuidgid uid=a gid=b",1);
+  test ("$CCS -f $t --setuidgid uid=z gid=z blah=x",1);
+  test ("$CCS -f $t --setuidgid blah=x",1);
+  test ("$CCS -f $t --setuidgid uid=a",0);
+  test ("$CCS -f $t --setuidgid gid=a",0);
+  test ("$CCS -f $t --setuidgid uid=b",0);
+  test ("$CCS -f $t --setuidgid gid=b",0);
+  test ("$CCS -f $t --setuidgid uid=c",0);
+  test ("$CCS -f $t --setuidgid gid=c",0);
+  test ("$CCS -f $t --rmuidgid uid=a",0);
+  test ("$CCS -f $t --rmuidgid gid=a",0);
+  test ("$CCS -f $t --rmuidgid",1);
+
   $retval = diff ($t,"$t.end");
   #`rm $t`;
   return $retval;
@@ -266,6 +282,7 @@ sub fence_test {
   test ("$CCS -f $t --addfenceinst fence_apc node1 badmethod port=1",1);
   test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",0);
   test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",1);
+  test ("$CCS -f $t --rmunfenceinst fence_ilo node1 node1method",0);
   test ("$CCS -f $t --rmunfenceinst fence_ilo node1 node1method",1);
   test ("$CCS -f $t --addunfenceinst fence_ilo node1 port=10",0);
   test ("$CCS -f $t --addunfenceinst fence_ilo node1 port=11",0);

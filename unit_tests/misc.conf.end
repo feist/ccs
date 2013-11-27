@@ -1,4 +1,4 @@
-<cluster config_version="26" name="mycluster">
+<cluster config_version="36" name="mycluster">
   <fence_daemon override_time="c" post_fail_delay="y"/>
   <clusternodes>
     <clusternode name="node1" nodeid="1"/>
@@ -19,4 +19,10 @@
     <logging_daemon name="3" to_logfile="3"/>
     <logging_daemon name="5" to_logfile="5"/>
   </logging>
+  <uidgid gid="y" uid="x"/>
+  <uidgid gid="b" uid="a"/>
+  <uidgid uid="b"/>
+  <uidgid gid="b"/>
+  <uidgid uid="c"/>
+  <uidgid gid="c"/>
 </cluster>

@@ -1,4 +1,4 @@
-<cluster config_version="27" name="mycluster">
+<cluster config_version="31" name="mycluster">
   <fence_daemon/>
   <clusternodes>
     <clusternode name="node1" nodeid="1">
