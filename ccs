@@ -250,8 +250,7 @@ def main(argv):
         elif opt in ("--getschema"): getclusterschema = True;
 
     if not hostname and not filename:
-        print "Must specify a hostname or filename."
-        sys.exit(2)
+        hostname = "localhost"
 
     if (getconf): get_cluster_conf()
     if (sendconf): send_cluster_conf()
