@@ -34,6 +34,10 @@ class StopNodeThread (threading.Thread):
         self.host = host
         threading.Thread.__init__(self)
         self.output = ""
+        self.stopped = False
+
+    def isStopped(self):
+        return self.stopped
 
     def getoutput(self):
         return self.output
@@ -42,12 +46,17 @@ class StopNodeThread (threading.Thread):
         self.output = stop_node(self.host,True)
         if self.output == 0:
             self.output = "Stopped %s" % self.host
+            self.stopped = True
 
 class StartNodeThread (threading.Thread):
     def __init__ (self, host):
         self.host = host
         threading.Thread.__init__(self)
         self.output = ""
+        self.started = False
+
+    def isStarted(self):
+        return self.started
 
     def getoutput(self):
         return self.output
@@ -56,6 +65,7 @@ class StartNodeThread (threading.Thread):
         self.output = start_node(self.host,True)
         if self.output == 0:
             self.output = "Started %s" % self.host
+            self.started = True
 
 def main(argv):
     getconf = sendconf = False
@@ -597,9 +607,14 @@ def start_all(nodelist = None):
         threads[node] = StartNodeThread(node)
         threads[node].start()
 
+    start_failure = False
     for thread in threads.values():
         thread.join()
         print thread.getoutput()
+        if (not thread.isStarted()):
+            start_failure = True
+    if (start_failure):
+        sys.exit(1)
 
 def stop_all(nodelist = None):
     if nodelist == None:
@@ -610,9 +625,14 @@ def stop_all(nodelist = None):
         threads[node] = StopNodeThread(node)
         threads[node].start()
 
+    stop_failure = False
     for thread in threads.values():
         thread.join()
         print thread.getoutput()
+        if (not thread.isStopped()):
+            stop_failure = True
+    if (stop_failure):
+        sys.exit(1)
 
 def get_nodelist():
     xml = get_cluster_conf_xml()
