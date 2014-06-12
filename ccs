@@ -347,10 +347,10 @@ Cluster configuration system.
                         cluster.conf file
                         same cluster.conf
       --getschema       Print current cluster schema file (if using -h use
-      			schema from network, if using -f use local schema)
-      --sync            Sync config file to all nodes
-      --activate        Activate config on node (use this option with --sync
-                        to activate config on all nodes)
+                        schema from network, if using -f use local schema)
+      --sync [--activate]
+                        Sync config file to all nodes and optionally activating
+                        that configuration on all nodes
   -d, --debug           Display debugging information to help troubleshoot
                         connection issues with ricci
       --exp tag [location] [options]
@@ -668,15 +668,26 @@ def get_cluster_status():
     print xml
 
 def sync_cluster_conf():
-    global hostname
+    global hostname, activate
+    temp_activate = activate
+    activate = False
     xml = get_cluster_conf_xml()
     dom = minidom.parseString(xml).getElementsByTagName('cluster')[0]
     xml = dom.toprettyxml(indent='  ',newl='')
     dom = minidom.parseString(xml)
-    for node in dom.getElementsByTagName('clusternode'):
-        nodename = node.getAttribute("name")
-        hostname = nodename
-        set_cluster_conf(xml)
+    nodes = dom.getElementsByTagName('clusternode')
+    if len(nodes) > 0:
+	for node in nodes[0:-1]:
+	    nodename = node.getAttribute("name")
+	    hostname = nodename
+	    set_cluster_conf(xml)
+
+	# If we're using --activate, only propogate on the last node
+	activate = temp_activate
+	node = nodes[-1]
+	nodename = node.getAttribute("name")
+	hostname = nodename
+	set_cluster_conf(xml)
 
 def list_nodes():
     xml = get_cluster_conf_xml()
@@ -2218,7 +2229,7 @@ def set_cluster_conf(xml, increment = True):
             log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("propagate", "boolean", "true"),("cluster.conf","xml","",xml)))
         else:
             log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("cluster.conf","xml","",xml)))
-
+    
 # Returns 0 if verification succeeded, an error code if it didn't
 def verify_cluster_conf(xml):
     if (not os.path.isfile(CLUSTERRNG)):
