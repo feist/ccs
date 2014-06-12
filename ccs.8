@@ -58,14 +58,14 @@ Get the current cluster.conf version
 Set the cluster.conf version
 .IP "--incversion
 Increment the cluster.conf version by 1
-.IP "--startall
-Start *AND* enable cluster services on reboot on all nodes
-.IP "--stopall
-Stop *AND* disable cluster services on reboot for all nodes
-.IP "--start
-Start *AND* enable cluster services on reboot for host specified with -h
-.IP "--stop
-Stop *AND* disable cluster services on reboot for host specified with -h
+.IP "--startall [--noenable|--nodisable]
+Start *AND* enable cluster services on reboot on all nodes (if --noenable or --nodisable is specified cluster services will only be started)
+.IP "--stopall [--noenable|--nodisable]
+Stop *AND* disable cluster services on reboot for all nodes (if --noenable or --nodisable is specified cluster services will only be stopped)
+.IP "--start [--noenable|--nodisable]
+Start *AND* enable cluster services on reboot for host specified with -h or localhost if no host is provided (if --noenable or --nodisable is specified cluster services will only be started)
+.IP "--stop [--noenable|--nodisable]
+Stop *AND* disable cluster services on reboot for host specified with -h or localhost if no host is provided (if --noenable or --nodisable is specified cluster services will only be stopped)
 .SS "NODE OPERATIONS"
 .IP "--lsnodes
 List all nodes in the cluster

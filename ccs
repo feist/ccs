@@ -99,6 +99,9 @@ def main(argv):
 
     global password, debug, sync, hostname, usefile, filename, activate
     global verifyconf, schema, nounfence
+    global noenable
+
+    noenable = False
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
         opts, args = getopt.gnu_getopt(argv, "dsih:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
@@ -111,7 +114,8 @@ def main(argv):
       "votes=", "rmfailoverdomainnode=", "setdlm", "rmheuristic", "startall", "stopall", "activate",
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
       "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug",
-      "setaltmulticast","addalt=", "rmalt=","lsresourceopts","nounfence","setuidgid","rmuidgid"])
+      "setaltmulticast","addalt=", "rmalt=","lsresourceopts","nounfence","setuidgid","rmuidgid", "noenable",
+      "nodisable"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -257,7 +261,8 @@ def main(argv):
         elif opt in ("-d","--debug"): debug = True
         elif opt in ("--exp"): exp = True; tag = arg; options = args
         elif opt in ("--exprm"): exprm = True; location = arg
-        elif opt in ("--getschema"): getclusterschema = True;
+        elif opt in ("--getschema"): getclusterschema = True
+        elif opt in ("--noenable") or opt in ("--nodisable"): noenable = True
 
     if not hostname and not filename:
         hostname = "localhost"
@@ -367,14 +372,24 @@ Cluster Operations:
       --getversion      Get the current cluster.conf version
       --setversion <n>  Set the cluster.conf version
       --incversion      Increment the cluster.conf version by 1
-      --startall        Start *AND* enable cluster services on reboot
-                        for all nodes
-      --stopall         Stop *AND* disable cluster services on reboot
-                        for all nodes
-      --start           Start *AND* enable cluster services on reboot for
-                        host specified with -h
-      --stop            Stop *AND* disable cluster services on reboot for
-                        host specified with -h
+      --startall [--noenable|--nodisable]
+                        Start *AND* enable cluster services on reboot
+                        for all nodes (if --noenable or --nodisable is
+                        specified cluster services will only be started)
+      --stopall [--noenable|--nodisable]
+                        Stop *AND* disable cluster services on reboot
+                        for all nodes (if --noenable or --nodisable is
+                        specified cluster services will only be stopped)
+      --start [--noenable|--nodisable]
+                        Start *AND* enable cluster services on reboot for
+                        host specified with -h or localhost if no host is
+                        provided (if --noenable or --nodisable is specified
+                        cluster services will only be started)
+      --stop [--noenable|--nodisable]
+                        Stop *AND* disable cluster services on reboot for
+                        host specified with -h or localhost if no host is
+                        provided (if --noenable or --nodisable is specified
+                        cluster services will only be stopped)
 
 Node Operations:
       --lsnodes         List all nodes in the cluster
@@ -384,9 +399,9 @@ Node Operations:
       --nodeid <nodeid> Specify nodeid when adding a node
       --votes <votes>   Specify number of votes when adding a node
       --addalt <node name> <alt name> [alt options]
-      			Add an altname to a node for RRP
+                        Add an altname to a node for RRP
       --rmalt <node name>
-      			Remove an altname from a node for RRP
+                        Remove an altname from a node for RRP
 
 Fencing Operations:
       --lsfenceopts [fence type]
@@ -441,7 +456,7 @@ Service Operations:
                         specified, then list options for the specified
                         service type
       --lsresourceopts [service type]
-      			An alias to --lsserviceopts
+                        An alias to --lsserviceopts
       --lsservices      List currently configured services and resources in
                         the cluster
       --addresource <resource type> [resource options] ...
@@ -496,9 +511,9 @@ Misc Options
       --settotem [totem options]
                         Set totem options
       --setuidgid uid=<uid> gid=<gid>
-      			Set uidgid options
+                        Set uidgid options
       --rmuidgid uid=<uid> gid=<gid>
-      			Remove uidgid entry matching specified uid/gid
+                        Remove uidgid entry matching specified uid/gid
       --setdlm [dlm options]
                         Set dlm options
       --setrm [resource manager options]
@@ -522,7 +537,10 @@ Misc Options
   """
 
 def stop_node(node, inthread=False):
-    xml = send_ricci_command("cluster", "stop_node", node)
+    if (noenable):
+        xml = send_ricci_command("cluster", "stop_node", node, ("disable_services", "boolean", "false"))
+    else:
+        xml = send_ricci_command("cluster", "stop_node", node)
 
     dom = minidom.parseString(xml)
     vars = dom.getElementsByTagName('var')
@@ -557,7 +575,10 @@ def stop_node(node, inthread=False):
     
 def start_node(node, inthread=False):
     error_description = ""
-    xml = send_ricci_command("cluster", "start_node", node)
+    if (noenable):
+      xml = send_ricci_command("cluster", "start_node", node, ("enable_services", "boolean", "false"))
+    else:
+      xml = send_ricci_command("cluster", "start_node", node)
 
     dom = minidom.parseString(xml)
     vars = dom.getElementsByTagName('var')
@@ -677,17 +698,17 @@ def sync_cluster_conf():
     dom = minidom.parseString(xml)
     nodes = dom.getElementsByTagName('clusternode')
     if len(nodes) > 0:
-	for node in nodes[0:-1]:
-	    nodename = node.getAttribute("name")
-	    hostname = nodename
-	    set_cluster_conf(xml)
+        for node in nodes[0:-1]:
+            nodename = node.getAttribute("name")
+            hostname = nodename
+            set_cluster_conf(xml)
 
-	# If we're using --activate, only propogate on the last node
-	activate = temp_activate
-	node = nodes[-1]
-	nodename = node.getAttribute("name")
-	hostname = nodename
-	set_cluster_conf(xml)
+        # If we're using --activate, only propogate on the last node
+        activate = temp_activate
+        node = nodes[-1]
+        nodename = node.getAttribute("name")
+        hostname = nodename
+        set_cluster_conf(xml)
 
 def list_nodes():
     xml = get_cluster_conf_xml()
@@ -1050,8 +1071,8 @@ def add_fenceinst(name, options):
     for fencedev in dom.getElementsByTagName('fencedevice'):
         if fencedev.getAttribute("name") == name:
             fencedev_found = True
-	    if need_unfence(fencedev.getAttribute("agent")):
-	      unfence=True
+            if need_unfence(fencedev.getAttribute("agent")):
+              unfence=True
             break
     
     # Verify method exists for specified node
@@ -1081,8 +1102,8 @@ def add_fenceinst(name, options):
 
     if need_unfence and not nounfence:
       for o in options[:]:
-	if o.startswith("action="):
-	  options.remove(o)
+        if o.startswith("action="):
+          options.remove(o)
       options.append("action=on")
       print "Note: Automatically adding unfence action... (use --nounfence to prevent this)"
       add_unfenceinst(name, options[:1] + options[2:])
@@ -1938,7 +1959,7 @@ def set_uidgid(options):
 	    sys.exit(1)
 
     set_cluster_conf(dom.toxml())
-	
+
 def rm_uidgid(options):
     dom = minidom.parseString(get_cluster_conf_xml())
 
@@ -2217,13 +2238,13 @@ def set_cluster_conf(xml, increment = True):
         xml = dom.toprettyxml("  ","\n")
         xml = xml.replace('<?xml version="1.0" ?>','')
         xml = re.sub(r"(?m)^\s*\n","", xml)
-	try:
-	    f = open(filename, 'w')
-	    f.write(xml)
-	    f.close()
-	except IOError as (errno, strerror):
-	    print "Error: Unable to write file: '%s', %s" % (filename, strerror)
-	    exit(1)
+        try:
+            f = open(filename, 'w')
+            f.write(xml)
+            f.close()
+        except IOError as (errno, strerror):
+            print "Error: Unable to write file: '%s', %s" % (filename, strerror)
+            exit(1)
     else:
         if activate:
             log_msg (send_ricci_command("cluster", "set_cluster.conf", hostname, ("propagate", "boolean", "true"),("cluster.conf","xml","",xml)))
