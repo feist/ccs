@@ -1100,7 +1100,7 @@ def add_fenceinst(name, options):
 
     set_cluster_conf(dom.toxml())
 
-    if need_unfence and not nounfence:
+    if unfence and not nounfence:
       for o in options[:]:
         if o.startswith("action="):
           options.remove(o)
