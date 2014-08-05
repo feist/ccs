@@ -13,6 +13,7 @@ from Queue import Queue
 import getpass
 import subprocess
 import tempfile
+from signal import signal, SIGPIPE, SIG_DFL
 
 RICCI_PORT = 11111
 CLUSTERRNG = "/usr/share/ccs/cluster.rng"
@@ -101,6 +102,7 @@ def main(argv):
     global verifyconf, schema, nounfence
     global noenable
 
+    signal(SIGPIPE,SIG_DFL)
     noenable = False
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
