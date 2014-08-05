@@ -2227,7 +2227,12 @@ def send_cluster_conf():
 
 # Set the cluster.conf file and increment the version
 def set_cluster_conf(xml, increment = True):
+    global hostname
     dom = minidom.parseString(xml)
+
+# If the hostname is not set, the we try localhost
+    if hostname == False:
+        hostname = "localhost"
 
     if increment:
       version = dom.getElementsByTagName("cluster")[0].getAttribute("config_version")
