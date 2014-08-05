@@ -822,7 +822,7 @@ def remove_node(node_to_remove):
     set_cluster_conf(dom.toxml())
 
 def get_version():
-    dom = minidom.parseString(get_cluster_conf_xml())
+    dom = minidom.parseString(get_cluster_conf_xml(True))
     return dom.getElementsByTagName('cluster')[0].getAttribute("config_version")
 
 def set_version(version):
@@ -871,7 +871,7 @@ def get_cluster_schema_file():
         return None
     return out
 
-def get_cluster_conf_xml():
+def get_cluster_conf_xml(dont_return_empty = False):
     if usefile:
         try:
             f = open(filename, 'r')
@@ -888,6 +888,13 @@ def get_cluster_conf_xml():
     except minidom.xml.parsers.expat.ExpatError:
         print "Cluster configuration file specified is not in a valid xml format."
         sys.exit(1)
+
+    if dont_return_empty and dom.getElementsByTagName('function_response').length > 0:
+        fr = dom.getElementsByTagName('function_response')[0]
+        for fr_var in fr.getElementsByTagName("var"):
+            if fr_var.getAttribute("name") == "success" and fr_var.getAttribute("value") == "false":
+                print "Unable to obtain cluster.conf file from remote node"
+                sys.exit(1)
 
     if dom.getElementsByTagName('cluster').length > 0:
         xml =  dom.getElementsByTagName('cluster')[0].toxml()
