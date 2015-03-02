@@ -755,6 +755,10 @@ def print_services_map(node,level):
     
     if node.nodeType == minidom.Node.TEXT_NODE:
         return
+
+    if node.nodeType == minidom.Node.COMMENT_NODE:
+        return
+
     for i in range(num_spaces):
         prefix = " " + prefix
 
