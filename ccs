@@ -84,6 +84,7 @@ def main(argv):
     addfailoverdomain = removefailoverdomain = False
     lsfailoverdomain = addfailoverdomainnode = removefailoverdomainnode = False
     addservice = addsubservice = addresource = False
+    addaction = removeaction = False
     removeservice = removesubservice = removeresource = False
     listquorum = setquorumd = addheuristic = removeheuristic = False
     settotem = setrm = setcman = setfencedaemon = False
@@ -117,7 +118,7 @@ def main(argv):
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
       "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug",
       "setaltmulticast","addalt=", "rmalt=","lsresourceopts","nounfence","setuidgid","rmuidgid", "noenable",
-      "nodisable"])
+      "nodisable", "addaction=", "rmaction="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -228,6 +229,14 @@ def main(argv):
             removeresource = True
             name = arg
             options = args
+        elif opt in ("--addaction"):
+            addaction = True
+            name = arg
+            options = args
+        elif opt in ("--rmaction"):
+            removeaction = True
+            name = arg
+            options = args
         elif opt in ("--addvm"):
             addvm = True
             name = arg
@@ -309,6 +318,8 @@ def main(argv):
     if (removesubservice): remove_subservice(name, options)
     if (addresource): add_resource(name, options)
     if (removeresource): remove_resource(name, options)
+    if (addaction): add_action(name, options)
+    if (removeaction): remove_action(name, options)
     if (addvm): add_vm(name,options)
     if (removevm): remove_vm(name)
     if (lsserviceopts): list_serviceopts(options)
@@ -471,6 +482,11 @@ Service Operations:
                         Add service to cluster
       --rmservice <servicename>
                         Removes a service and all of its subservices
+      --addaction <resource/name> <action_name> <action_option=val>
+                        Add an action to the specified resource.
+      --rmaction <resource name> [<action_name> [action options]]
+                        Remove all actions from resource, or actions matching
+                        action name and options specified
       --addvm <virtual machine name> [vm options] ...
                         Add a virtual machine to the cluster
       --rmvm <virtual machine name>
@@ -950,7 +966,7 @@ def create_cluster(clustername):
                 sys.exit(1)
 
     # No need to increment on cluster.conf creation
-    set_cluster_conf(xml, False)
+    set_cluster_conf(xml, False, True)
 
 def add_method(method, options):
     method_found = False
@@ -1653,6 +1669,108 @@ def remove_resource(type, options):
             
     set_cluster_conf(dom.toxml())
 
+def return_elements_with_attr(elem, attr_name, attr_val):
+    children = elem.childNodes
+    ret = []
+
+    if elem.nodeType == minidom.Node.DOCUMENT_NODE:
+        for child in elem.getElementsByTagName("cluster"):
+            ret = ret + return_elements_with_attr(child,attr_name, attr_val)
+        return ret
+
+    if elem.nodeType != minidom.Node.ELEMENT_NODE:
+        return []
+
+    if elem.hasAttribute(attr_name) and elem.attributes[attr_name].value == attr_val:
+        ret.append(elem)
+
+    for child in children:
+        ret = ret + return_elements_with_attr(child, attr_name, attr_val)
+
+    return ret
+
+def add_action(resname, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+    if len(options) < 1:
+        print "You must specify an action name when adding"
+        sys.exit(1)
+
+    action_name = options.pop(0)
+
+    # Verify resource exists
+    elems = return_elements_with_attr(dom, "name", resname)
+    if len(elems) == 0:
+        print "Error: Could not find resource/service with name: %s" % (resname)
+        sys.exit(1)
+
+    if len(elems) > 1:
+        print "Error: Too many elements in cluster.conf matched name: %s" % (resname)
+        sys.exit(1)
+
+    resElem = elems[0]
+    actionElem = dom.createElement("action")
+    actionElem.setAttribute("name",action_name)
+    resElem.appendChild(actionElem)
+
+    for option in options:
+        if option.find('=') == -1:
+            print "Error: --addaction options must be of the form option=value"
+            sys.exit(1)
+
+        (k,v) = option.split('=',1)
+        actionElem.setAttribute(k,v)
+
+    set_cluster_conf(dom.toxml())
+
+def remove_action(resname, options):
+    dom = minidom.parseString(get_cluster_conf_xml())
+
+    if len(options) >= 1:
+        action_name = options.pop(0)
+    else:
+        action_name = None
+
+    # Verify resource exists
+    elems = return_elements_with_attr(dom, "name", resname)
+    if len(elems) == 0:
+        print "Error: Could not find resource/service with name: %s" % (resname)
+        sys.exit(1)
+
+    if len(elems) > 1:
+        print "Error: Too many elements in cluster.conf matched name: %s" % (resname)
+        sys.exit(1)
+
+    resElem = elems[0]
+    elements_to_remove = []
+    for elem in resElem.getElementsByTagName("action"):
+        elementMatch = True
+        if action_name != None and (not elem.hasAttribute("name") or elem.getAttribute("name") != action_name):
+            elementMatch = False
+        for option in options:
+            if option.find('=') == -1:
+                if not elem.hasAttribute("option"):
+                    elementMatch = False
+            else:
+                (k,v) = option.split('=',1)
+                if not elem.hasAttribute(k) or elem.getAttribute(k) != v:
+                    elementMatch = False
+        if elementMatch:
+            elements_to_remove.append(elem)
+
+    if len(elements_to_remove) == 0:
+        if action_name == None:
+            print "Error: no elements found matching resource: %s options: %s" % (resname, " ".join(options))
+        else:
+            print "Error: no elements found matching resource: %s action name: %s options: %s" % (resname, action_name, " ".join(options))
+
+        sys.exit(1)
+
+    for elem in elements_to_remove:
+        elem.parentNode.removeChild(elem)
+
+    set_cluster_conf(dom.toxml())
+
+
 def add_vm(vmname, options):
     dom = minidom.parseString(get_cluster_conf_xml())
 
@@ -2223,14 +2341,14 @@ def send_cluster_conf():
     xml = get_cluster_conf_xml()
     # After reading file, zero out usefile and filename to send to host
     usefile = filename = False
-    set_cluster_conf(xml, False)
+    set_cluster_conf(xml, False, False)
 
 # Set the cluster.conf file and increment the version
-def set_cluster_conf(xml, increment = True):
+def set_cluster_conf(xml, increment = True, host_not_required = True):
     dom = minidom.parseString(xml)
 
 # If the hostname is not set, the we try localhost
-    if hostname == False:
+    if hostname == False and host_not_required == False:
         print "Error: you must specify a filename and host when using --setconf"
         sys.exit(1)
 

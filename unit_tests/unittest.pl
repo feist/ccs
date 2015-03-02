@@ -208,6 +208,22 @@ sub service_test {
   test ("$CCS -f $t --rmvm vmname1",0);
   test ("$CCS -f $t --addvm vmname1 autostart=1 migrate=live",0);
 
+  test ("$CCS -f $t --addaction vmname1",1);
+  test ("$CCS -f $t --rmaction vmname1",1);
+  test ("$CCS -f $t --addaction vmname1 stop timeout=10m",0);
+  test ("$CCS -f $t --addaction vmname1 stop2 timeout=11m",0);
+  test ("$CCS -f $t --addaction vmname1 stop3 timeout=12m",0);
+  test ("$CCS -f $t --addaction vmname2 stop timeout=5m",0);
+  test ("$CCS -f $t --addaction vmname2 stop timeout=6m",0);
+  test ("$CCS -f $t --rmaction vmname2 stop timeout=6m",0);
+  test ("$CCS -f $t --addaction vmname3 stop timeout=3m",0);
+  test ("$CCS -f $t --rmaction vmname3 stop timeout=4m",1);
+  test ("$CCS -f $t --rmaction vmname4 stop timeout=3m",1);
+  test ("$CCS -f $t --rmaction vmname3 stop timeout=3m",0);
+  test ("$CCS -f $t --addaction vmname3 stop timeout=21m",0);
+  test ("$CCS -f $t --addaction vmname3 stop2 timeout=22m",0);
+  test ("$CCS -f $t --addaction vmname3 stop3 timeout=23m",0);
+  test ("$CCS -f $t --rmaction vmname3",0);
 
   $retval = diff ($t,"$t.end");
   #`rm $t`;
@@ -282,7 +298,7 @@ sub fence_test {
   test ("$CCS -f $t --addfenceinst fence_apc node1 badmethod port=1",1);
   test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",0);
   test ("$CCS -f $t --rmfenceinst fence_ilo node1 node1method",1);
-  test ("$CCS -f $t --rmunfenceinst fence_ilo node1 node1method",0);
+  test ("$CCS -f $t --rmunfenceinst fence_ilo node1 node1method",1);
   test ("$CCS -f $t --rmunfenceinst fence_ilo node1 node1method",1);
   test ("$CCS -f $t --addunfenceinst fence_ilo node1 port=10",0);
   test ("$CCS -f $t --addunfenceinst fence_ilo node1 port=11",0);

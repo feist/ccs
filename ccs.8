@@ -146,6 +146,10 @@ Remove specified resource with resource options
 Add service to cluster
 .IP "--rmservice <servicename>
 Removes a service and all of its subservices
+.IP "--addaction <resource/name> <action_name> <action_option=val>
+Add an action to the specified resource.
+.IP "--rmaction <resource name> [<action_name> [action options]]
+Remove all actions from resource, or actions matching action name and options specified
 .IP "--addvm <virtual machine name> [vm options] ...
 Adds a virtual machine to the cluster
 .IP "--rmvm <virtual machine name>
