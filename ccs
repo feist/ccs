@@ -2436,6 +2436,18 @@ def check_cluster_conf():
     else:
         print "All nodes in sync."
 
+# If success is "10" (RRC_AUTH_FAIL) then we have already been
+# authenticated, but we used a bad password
+def verify_authentication_password(dom):
+    ricci =  dom.getElementsByTagName("ricci")
+    if len(ricci) > 0:
+        if ricci[0].getAttribute("success") != "0":
+            return False
+        else:
+            return True
+    print "Error: no ricci tag in ricci response"
+    sys.exit(1)
+
 def verify_authentication(dom):
     ricci =  dom.getElementsByTagName("ricci")
     if len(ricci) > 0:
@@ -2452,6 +2464,10 @@ def check_authentication(host):
     dom = minidom.parseString(res[1])
     if (not verify_authentication(dom)):
         print "Unable to authenticate with ricci node, please check password."
+        sys.exit(1)
+
+    if (not verify_authentication_password(dom)):
+        print "This node is already authorized, but a bad password was provided. (try not using the '-p' option)"
         sys.exit(1)
 
 def send_ricci_command(module, command, host = None, *vars):
