@@ -2263,7 +2263,7 @@ def remove_logging_daemon(options):
         logger_options[attr] = val
 
     for logger in logging.childNodes:
-        if logger.nodeType == minidom.Node.TEXT_NODE or resource.nodeType == minidom.Node.COMMENT_NODE:
+        if logger.nodeType == minidom.Node.TEXT_NODE or logger.nodeType == minidom.Node.COMMENT_NODE:
             continue
         loggerMatch = False
         for option,val in logger_options.iteritems():
