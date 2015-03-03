@@ -1622,7 +1622,7 @@ def add_resource(type, options):
 
     if resname != False:
         for resource in resources.childNodes:
-            if resource.nodeType == minidom.Node.TEXT_NODE:
+            if resource.nodeType == minidom.Node.TEXT_NODE or resource.nodeType == minidom.Node.COMMENT_NODE:
                 continue
             if resource.getAttribute("name") == resname:
                 print "Duplicate name: %s" % resname
@@ -1657,7 +1657,7 @@ def remove_resource(type, options):
         resource_options[attr] = val
 
     for resource in resources.childNodes:
-        if resource.nodeType == minidom.Node.TEXT_NODE:
+        if resource.nodeType == minidom.Node.TEXT_NODE or resource.nodeType == minidom.Node.COMMENT_NODE:
             continue
         if resource.tagName == type:
             resourceMatch = False
@@ -1796,7 +1796,7 @@ def add_vm(vmname, options):
     # Verify name is unique, if no name then we don't search for duplicates
     if rm != False:
         for vm in rm.childNodes:
-            if vm.nodeType == minidom.Node.TEXT_NODE:
+            if vm.nodeType == minidom.Node.TEXT_NODE or vm.nodeType == minidom.Node.COMMENT_NODE:
                 continue
             if vm.getAttribute("name") == vmname:
                 print "Duplicate name: %s" % vmname
@@ -2263,7 +2263,7 @@ def remove_logging_daemon(options):
         logger_options[attr] = val
 
     for logger in logging.childNodes:
-        if logger.nodeType == minidom.Node.TEXT_NODE:
+        if logger.nodeType == minidom.Node.TEXT_NODE or resource.nodeType == minidom.Node.COMMENT_NODE:
             continue
         loggerMatch = False
         for option,val in logger_options.iteritems():
