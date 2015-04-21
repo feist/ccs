@@ -1717,6 +1717,14 @@ def add_action(resname, options):
         sys.exit(1)
 
     resElem = elems[0]
+
+    for elem in resElem.childNodes:
+        if elem.nodeType != minidom.Node.ELEMENT_NODE:
+            continue
+        if elem.tagName == "action" and elem.attributes["name"].value == action_name:
+            print "Error: '%s' action already exists for '%s'" % (action_name, resname)
+            sys.exit(1)
+
     actionElem = dom.createElement("action")
     actionElem.setAttribute("name",action_name)
     resElem.appendChild(actionElem)

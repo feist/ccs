@@ -213,9 +213,11 @@ sub service_test {
   test ("$CCS -f $t --addaction vmname1 stop timeout=10m",0);
   test ("$CCS -f $t --addaction vmname1 stop2 timeout=11m",0);
   test ("$CCS -f $t --addaction vmname1 stop3 timeout=12m",0);
+  test ("$CCS -f $t --addaction vmname2 start timeout=5m",0);
   test ("$CCS -f $t --addaction vmname2 stop timeout=5m",0);
-  test ("$CCS -f $t --addaction vmname2 stop timeout=6m",0);
-  test ("$CCS -f $t --rmaction vmname2 stop timeout=6m",0);
+  test ("$CCS -f $t --addaction vmname2 stop timeout=6m",1);
+  test ("$CCS -f $t --rmaction vmname2 stop timeout=5m",0);
+  test ("$CCS -f $t --addaction vmname2 stop timeout=5m",0);
   test ("$CCS -f $t --addaction vmname3 stop timeout=3m",0);
   test ("$CCS -f $t --rmaction vmname3 stop timeout=4m",1);
   test ("$CCS -f $t --rmaction vmname4 stop timeout=3m",1);
