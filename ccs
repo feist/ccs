@@ -561,9 +561,15 @@ Misc Options
 
 def stop_node(node, inthread=False):
     if (noenable):
-        xml = send_ricci_command("cluster", "stop_node", node, ("disable_services", "boolean", "false"))
+        if not inthread:
+            xml = send_ricci_command("cluster", "stop_node", node, ("disable_services", "boolean", "false"))
+        else:
+            xml = send_ricci_command("cluster", "stop_node", node, ("disable_services", "boolean", "false"), ("cluster_shutdown", "boolean", "true"))
     else:
-        xml = send_ricci_command("cluster", "stop_node", node)
+        if not inthread:
+            xml = send_ricci_command("cluster", "stop_node", node)
+        else:
+            xml = send_ricci_command("cluster", "stop_node", node, ("cluster_shutdown", "boolean", "true"))
 
     dom = minidom.parseString(xml)
     vars = dom.getElementsByTagName('var')
