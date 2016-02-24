@@ -13,6 +13,8 @@ from Queue import Queue
 import getpass
 import subprocess
 import tempfile
+import errno
+import datetime
 from signal import signal, SIGPIPE, SIG_DFL
 
 RICCI_PORT = 11111
@@ -101,14 +103,15 @@ def main(argv):
 
     global password, debug, sync, hostname, usefile, filename, activate
     global verifyconf, schema, nounfence
-    global noenable, usealt
+    global noenable, usealt, orig_cluster_conf, backup
 
     usealt = False
+    backup = False
     signal(SIGPIPE,SIG_DFL)
     noenable = False
 #    logging.basicConfig(level=logging.DEBUGRemove
     try:
-        opts, args = getopt.gnu_getopt(argv, "dsih:p:f:", ["help","host=","getconf","status","start","stop","lsnodes",
+        opts, args = getopt.gnu_getopt(argv, "dsih:p:f:b", ["help","host=","getconf","status","start","stop","lsnodes",
       "lsservices", "listdomains", "addnode=", "rmnode=", "getversion","setversion=","incversion",
       "createcluster=", "password=", "addmethod=", "rmmethod=", "addfencedev=", "rmfencedev=",
       "addfenceinst=", "rmfenceinst=", "lsfencedev", "lsfenceinst", "sync", "addfailoverdomain=",
@@ -119,7 +122,7 @@ def main(argv):
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
       "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug",
       "setaltmulticast","addalt=", "rmalt=","lsresourceopts","nounfence","setuidgid","rmuidgid", "noenable",
-      "nodisable", "addaction=", "rmaction=","usealt"])
+      "nodisable", "addaction=", "rmaction=","usealt","backup"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -276,6 +279,7 @@ def main(argv):
         elif opt in ("--getschema"): getclusterschema = True
         elif opt in ("--noenable") or opt in ("--nodisable"): noenable = True
         elif opt in ("--usealt"): usealt = True
+        elif opt in ("-b","--backup"): backup = True
 
     if not hostname and not filename:
         hostname = "localhost"
@@ -379,6 +383,8 @@ Cluster configuration system.
       --sync [--activate]
                         Sync config file to all nodes and optionally activating
                         that configuration on all nodes
+  -b, --backup          Backup cluster.conf file before changes in
+                        ~/.ccs/backup directory
   -d, --debug           Display debugging information to help troubleshoot
                         connection issues with ricci
       --exp tag [location] [options]
@@ -910,6 +916,7 @@ def get_cluster_schema_file():
     return out
 
 def get_cluster_conf_xml(dont_return_empty = False):
+    global orig_cluster_conf
     if usefile:
         try:
             f = open(filename, 'r')
@@ -939,6 +946,8 @@ def get_cluster_conf_xml(dont_return_empty = False):
         if verifyconf and verify_cluster_conf(xml) != 0:
             print "Cluster.conf file specified is not a valid cluster.conf file (use -i to ignore this error)"
             sys.exit(1)
+
+        orig_cluster_conf = xml
         return xml
     else:
         return empty_cluster_conf()
@@ -2394,6 +2403,19 @@ def set_cluster_conf(xml, increment = True, host_not_required = True):
             print "Validation Failure, unable to modify configuration file (use -i to ignore this error)."
             sys.exit(1)
 
+    if backup:
+        path = os.path.expanduser("~/.ccs/backup/")
+        try:
+            os.makedirs(path)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            else:
+                raise
+        filetime = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        with open("%scluster.conf.%s" % (path,filetime),"w") as backup_file:
+                backup_file.write(orig_cluster_conf)
+
     if usefile:
         xml = dom.toprettyxml("  ","\n")
         xml = xml.replace('<?xml version="1.0" ?>','')
@@ -2402,7 +2424,7 @@ def set_cluster_conf(xml, increment = True, host_not_required = True):
             f = open(filename, 'w')
             f.write(xml)
             f.close()
-        except IOError as (errno, strerror):
+        except IOError as (errnum, strerror):
             print "Error: Unable to write file: '%s', %s" % (filename, strerror)
             exit(1)
     else:
