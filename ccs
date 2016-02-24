@@ -101,8 +101,9 @@ def main(argv):
 
     global password, debug, sync, hostname, usefile, filename, activate
     global verifyconf, schema, nounfence
-    global noenable
+    global noenable, usealt
 
+    usealt = False
     signal(SIGPIPE,SIG_DFL)
     noenable = False
 #    logging.basicConfig(level=logging.DEBUGRemove
@@ -118,7 +119,7 @@ def main(argv):
       "setconf", "lsquorum", "lsfailoverdomain", "lsmisc", "checkconf", "exp=", "exprm=", "addunfenceinst=",
       "rmunfenceinst=","addvm=","rmvm=", "lsfenceopts", "lsserviceopts", "getschema", "ignore", "debug",
       "setaltmulticast","addalt=", "rmalt=","lsresourceopts","nounfence","setuidgid","rmuidgid", "noenable",
-      "nodisable", "addaction=", "rmaction="])
+      "nodisable", "addaction=", "rmaction=","usealt"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -274,6 +275,7 @@ def main(argv):
         elif opt in ("--exprm"): exprm = True; location = arg
         elif opt in ("--getschema"): getclusterschema = True
         elif opt in ("--noenable") or opt in ("--nodisable"): noenable = True
+        elif opt in ("--usealt"): usealt = True
 
     if not hostname and not filename:
         hostname = "localhost"
@@ -357,6 +359,9 @@ Cluster configuration system.
 
       --help            Display this help and exit
   -h, --host host       Cluster node to perform actions on
+      --usealt          If primary node name is unavailable, attempt to
+                        connect to ricci on the alt interface (only works from
+                        a cluster member)
   -f, --file file       File to perform actions on
   -i, --ignore          Ignore validation errors in cluster.conf file
   -p, --password        Ricci user password for node running ricci
@@ -2477,6 +2482,22 @@ def verify_authentication(dom):
     print "Error: no ricci tag in ricci response"
     sys.exit(1)
 
+def get_alt_name(host):
+    try:
+        with open('/etc/cluster/cluster.conf') as f:
+            data = f.read()
+    except IOError:
+        return None
+    dom = minidom.parseString(data)
+    node_found = False
+
+    for node in dom.getElementsByTagName('clusternode'):
+        if node.getAttribute("name") == host:
+            for altname in node.getElementsByTagName('altname'):
+                return altname.getAttribute("name")
+
+    return None
+
 def check_authentication(host):
     msg = '<ricci function="authenticate" password="%s" version="1.0"/>' % password
     res = send_to_ricci(msg, host)     
@@ -2575,8 +2596,19 @@ emailAddress           = root@localhost
     try:
         ss.connect((host, RICCI_PORT))
     except socket.error:
-        print "Unable to connect to %s, make sure the ricci server is started." % host
-        sys.exit(1)
+        if not usealt:
+            alt_name = None
+        else:
+            alt_name = get_alt_name(host)
+        if alt_name != None:
+            try:
+                ss.connect((alt_name, RICCI_PORT))
+            except socket.error:
+                print "Unable to connect to %s or %s, make sure the ricci server is started." % (host,alt_name)
+                sys.exit(1)
+        else:
+            print "Unable to connect to %s, make sure the ricci server is started." % host
+            sys.exit(1)
 
     log_msg ("***Sending to ricci server:")
     log_msg (msg)
