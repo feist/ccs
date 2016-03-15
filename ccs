@@ -2616,6 +2616,8 @@ emailAddress           = root@localhost
 
     ss = ssl.wrap_socket(s, key, cert)
     try:
+        if usealt:
+            ss.settimeout(10)
         ss.connect((host, RICCI_PORT))
     except socket.error:
         if not usealt:
@@ -2624,6 +2626,8 @@ emailAddress           = root@localhost
             alt_name = get_alt_name(host)
         if alt_name != None:
             try:
+                ss = ssl.wrap_socket(socket.socket(socket.AF_INET), key, cert)
+                ss.settimeout(10)
                 ss.connect((alt_name, RICCI_PORT))
             except socket.error:
                 print "Unable to connect to %s or %s, make sure the ricci server is started." % (host,alt_name)
